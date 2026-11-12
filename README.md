@@ -16,7 +16,7 @@ branch; both branches are merged before submission.
 | `slm_interface.py` | B's unified inference interface (`generate` / `sample`); optional, the notebook has a local fallback |
 | `data/items/` | fixed val / test questions and gold (500 answerable + 500 unanswerable each, seed 42) |
 | `data/outputs_b/` | B's cached M1 / M3 / M2 / M4 outputs (so the analysis runs without a GPU) |
-| `results/` | main table, M2/M4 table, CIs, coverage–accuracy curves, per-question scored jsonl |
+| `results/` | main table, M2/M4 table, CIs, coverage–accuracy curves, per-question scored jsonl (`notebook_main_table.csv` is the notebook's own full-run output) |
 | `figures/` | fig1 pipeline, fig2 coverage–quality–cost |
 | `slides/` | presentation deck |
 
@@ -33,7 +33,8 @@ branch; both branches are merged before submission.
 4. Default mode is a **20-question end-to-end demo** (`RUN_QUICK_DEMO=True`).
    For the full 1,000-question table set `RUN_FULL_EXPERIMENT=True` at the bottom
    of the last cell. It stores 8 samples per question, scores the first 5, tunes
-   thresholds on val only, and writes `results/main_table_fixed_coverage.csv`.
+   thresholds on val only, and writes `results/notebook_main_table.csv` (the
+   curated report table stays at `results/main_table_fixed_coverage.csv`).
 5. To show the already-computed report table without a GPU, set both flags to
    `False` and run `show_cached_results()`.
 
