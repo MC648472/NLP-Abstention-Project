@@ -1,0 +1,46 @@
+{
+  "M1": {
+    "0.3": {
+      "tau": -0.13059915539298134,
+      "val_coverage": 0.3,
+      "rule": "answered iff confidence >= tau",
+      "unreachable": false
+    },
+    "0.5": {
+      "tau": -0.2525346172042191,
+      "val_coverage": 0.5,
+      "rule": "answered iff confidence >= tau",
+      "unreachable": false
+    }
+  },
+  "M3_k5": {
+    "0.3": {
+      "tau": 1.0,
+      "val_coverage": 0.49,
+      "rule": "answered iff confidence >= tau",
+      "unreachable": true
+    },
+    "0.5": {
+      "tau": 1.0,
+      "val_coverage": 0.49,
+      "rule": "answered iff confidence >= tau",
+      "unreachable": false
+    }
+  },
+  "TwoStage": {
+    "0.3": {
+      "tau_low": -0.1601560902359779,
+      "tau_high": -0.030430572201839798,
+      "tau_c": 1.0,
+      "val_accuracy": 0.53,
+      "val_coverage": 0.302
+    },
+    "0.5": {
+      "tau_low": -0.5450270978733897,
+      "tau_high": -0.10999514933791943,
+      "tau_c": 1.0,
+      "val_accuracy": 0.499,
+      "val_coverage": 0.484
+    }
+  }
+}

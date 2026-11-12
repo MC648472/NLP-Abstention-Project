@@ -1,0 +1,7 @@
+﻿pair,target_coverage,cov_a,cov_b,d_selective,d_sel_ci_low,d_sel_ci_high,d_behaviour,d_beh_ci_low,d_beh_ci_high,mcnemar_p,note
+M1 vs M3(k=5),0.3,,,,,,,,,,M3 cannot reach 0.3 (min coverage 0.483) - not compared
+M1 vs two-stage,0.3,0.295,0.298,0.0054,-0.0218,0.0333,-0.0029,-0.017,0.011,0.7874,discordant 26/29
+M3(k=5) vs two-stage,0.3,,,,,,,,,,M3 cannot reach 0.3 (min coverage 0.483) - not compared
+M1 vs M3(k=5),0.5,0.5,0.483,-0.0274,-0.0582,0.0038,-0.0159,-0.044,0.011,0.2815,discordant 89/105
+M1 vs two-stage,0.5,0.5,0.48,-0.0347,-0.0615,-0.0076,-0.0181,-0.042,0.006,0.1679,discordant 67/85
+M3(k=5) vs two-stage,0.5,0.483,0.48,-0.0073,-0.0219,0.0073,-0.0022,-0.015,0.011,0.8774,discordant 20/22

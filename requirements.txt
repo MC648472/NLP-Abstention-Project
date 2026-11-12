@@ -1,0 +1,13 @@
+# Colab / analysis environment
+# Python 3.10+ (Colab already has torch/transformers)
+numpy>=1.24
+pandas>=1.5
+Pillow>=9.0
+
+# GPU notebook
+torch>=2.1
+transformers>=4.40
+accelerate>=0.30
+
+# Optional: regenerate slides/pptx
+python-pptx>=0.6.23

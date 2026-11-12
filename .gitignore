@@ -218,3 +218,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- NLP-Abstention-Project ---
+squad_data/
+*.safetensors
+*.bin
+*.pt
+*.ckpt
+*.mp4
+legacy/
+handoff_to_B_*.zip
+submission/*.zip
+results/_write_test.md

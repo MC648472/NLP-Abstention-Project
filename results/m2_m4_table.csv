@@ -1,0 +1,5 @@
+﻿method,target_cov,tau,val_cov,test_cov,selective_acc,behaviour_acc,correct_refusal,over_refusal,auroc,avg_samples,note
+M2-conf,0.3,0.95,0.379,0.389,0.4087,0.48,0.642,0.58,0.6023,1.0,
+M2-conf,0.5,0.9,0.465,0.467,0.4176,0.48,0.57,0.496,0.6023,1.0,
+M2-idk,natural,,0.765,0.772,0.2098,0.319,0.314,0.142,,1.0,refuses by itself (no threshold); AUROC not reported
+M4,natural,,0.392,0.37,0.627,0.652,0.84,0.42,,1.0,refuses by itself (no threshold); AUROC not reported
