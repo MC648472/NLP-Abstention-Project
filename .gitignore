@@ -228,5 +228,8 @@ squad_data/
 *.mp4
 legacy/
 handoff_to_B_*.zip
+handoff_to_*.zip
+two_stage_handoff.zip
 submission/*.zip
 results/_write_test.md
+.ipynb_checkpoints/

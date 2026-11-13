@@ -9,5 +9,5 @@ torch>=2.1
 transformers>=4.40
 accelerate>=0.30
 
-# Optional: regenerate slides/pptx
-python-pptx>=0.6.23
+# M2 / M4 (B's branch): LoRA fine-tuning
+peft>=0.10
