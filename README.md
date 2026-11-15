@@ -63,8 +63,8 @@ pixels. No number in the report comes from outside this repository.
    adapter). Section 13 scores the r30 / r50 / r70 ablation from the committed generations — CPU only.
    Section 14 is the threshold-free diagnostic: AUROC labelled by *would the forced answer be correct*,
    the mean `avg_logprob` of the three question buckets, and the conditional refusal rates — also CPU only.
-6. With every flag `False` the notebook needs no GPU: it prints the cached tables and the M4 case list.
-7. Section 16 is the one-question live demo used in the presentation video (answered / correctly refused /
+6. With every flag `False` the notebook needs no GPU: it prints the cached tables.
+7. Section 16 is the live demo used in the presentation video (answered / correctly refused /
    answered although it should have refused), at the val-tuned 0.3-coverage operating point.
 
 ## Protocol
