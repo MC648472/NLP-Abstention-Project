@@ -29,18 +29,18 @@
   },
   "TwoStage": {
     "0.3": {
-      "tau_low": -0.1601560902359779,
-      "tau_high": -0.030430572201839798,
-      "tau_c": 1.0,
-      "val_accuracy": 0.53,
-      "val_coverage": 0.302
+      "tau_low": -0.13060048876083993,
+      "tau_high": -0.08470500484108924,
+      "tau_c": 0.8,
+      "val_accuracy": 0.527,
+      "val_coverage": 0.291
     },
     "0.5": {
-      "tau_low": -0.5450270978733897,
-      "tau_high": -0.10999514933791943,
+      "tau_low": -0.3192120895467021,
+      "tau_high": -0.1861786289761464,
       "tau_c": 1.0,
-      "val_accuracy": 0.499,
-      "val_coverage": 0.484
+      "val_accuracy": 0.495,
+      "val_coverage": 0.49
     }
   }
 }

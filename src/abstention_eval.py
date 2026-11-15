@@ -532,16 +532,29 @@ def simulate_two_stage(m1_preds, m3_preds, gold_by_id, tau_low, tau_high, tau_c)
     return out
 
 
+#: Pre-registered Stage-1 threshold grid (A -> B handoff, docs/two_stage_spec.md):
+#: deciles of the val M1 score.  Both the main table and the k ablation must use
+#: this exact grid; a finer 5% grid was tried once and selected a different,
+#: much more expensive operating point, so it is not the official protocol.
+TWO_STAGE_QUANTILES = tuple(i / 10 for i in range(1, 10))
+TWO_STAGE_COVERAGE_TOL = 0.02
+
+
 def tune_two_stage_at_coverage(m1_preds, m3_preds, gold_by_id, target_coverage,
-                               quantiles=None, coverage_tol=0.02):
+                               quantiles=None, coverage_tol=TWO_STAGE_COVERAGE_TOL):
     """Grid-search (tau_low, tau_high, tau_c) on val for a target coverage.
 
-    Objective: among configs whose val coverage is within `coverage_tol` of the
-    target, maximise behaviour accuracy; ties are broken by *fewer samples*
-    (that is the compute-aware claim, so it must not be decided by grid order).
+    Official protocol (shared by `run_fixed_coverage.py` and
+    `ablate_two_stage.py`):
+
+    * ``tau_low`` / ``tau_high`` are deciles of the val M1 score;
+    * ``tau_c`` is in {0.2, 0.4, 0.6, 0.8, 1.0};
+    * keep configs with ``|val coverage - target| <= 0.02``;
+    * maximise val behaviour accuracy, breaking ties by fewer samples.
+
     Returns ((tau_low, tau_high, tau_c), val_accuracy, val_coverage).
     """
-    quantiles = quantiles or [i / 20 for i in range(1, 20)]
+    quantiles = quantiles or TWO_STAGE_QUANTILES
     scores = np.sort([p["confidence"] for p in m1_preds])
     cuts = sorted({float(np.quantile(scores, q)) for q in quantiles})
     best = None

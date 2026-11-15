@@ -228,6 +228,21 @@ def clean(pts, lo=0.03, hi=1.0):
             if lo <= x <= hi and y == y]
 
 
+def load_two_stage_points():
+    """Read the official two-stage operating points from the generated main table.
+
+    Figure 2 must not hard-code them: the threshold grid (and therefore the
+    operating point) is owned by run_fixed_coverage.py, and a stale copy here is
+    exactly how the main table and the ablation drifted apart before.
+    """
+    path = ROOT / "results" / "main_table_fixed_coverage.csv"
+    with path.open(encoding="utf-8-sig") as fh:
+        rows = [r for r in csv.DictReader(fh) if r["method"] == "TwoStage"]
+    rows.sort(key=lambda r: float(r["target_coverage"]))
+    return [(float(r["test_coverage"]), float(r["selective_accuracy"]),
+             float(r["behaviour_accuracy"])) for r in rows]
+
+
 def fig2():
     W, H = 1600, 700
     c = Canvas(W, H)
@@ -238,7 +253,7 @@ def fig2():
     m3b = clean([(p["coverage"], p["behaviour_accuracy"]) for p in CURVES["M3_k5"]])
     m1 = m1[::8] + [m1[-1]]
     m1b = m1b[::8] + [m1b[-1]]
-    ts = [(0.298, 0.517, 0.538), (0.480, 0.463, 0.514)]
+    ts = load_two_stage_points()
     m4 = None
     m24 = ROOT / "results" / "m2_m4_table.csv"
     if m24.exists():
@@ -308,7 +323,7 @@ def write_data():
                          if p["selective_accuracy"] == p["selective_accuracy"] else "",
                          "behaviour_accuracy": round(p["behaviour_accuracy"], 6),
                          "tau": p["tau"]})
-    for cov, sel, beh in [(0.298, 0.517, 0.538), (0.480, 0.463, 0.514)]:
+    for cov, sel, beh in load_two_stage_points():
         rows.append({"series": "TwoStage", "coverage": cov, "selective_accuracy": sel,
                      "behaviour_accuracy": beh, "tau": ""})
     with (OUT / "plot_data.csv").open("w", encoding="utf-8-sig", newline="") as f:

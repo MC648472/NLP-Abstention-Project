@@ -124,7 +124,6 @@ for target in TARGETS:
     m1_test, m3_test = method_preds("M1", "test"), method_preds("M3_k5", "test")
     cfg, val_acc, val_cov = ae.tune_two_stage_at_coverage(
         m1_val, m3_val, gold_by_id("val"), target,
-        quantiles=[i / 20 for i in range(1, 20)],
     )
     ts = ae.simulate_two_stage(m1_test, m3_test, gold_by_id("test"), *cfg)
     m = ae.evaluate(ts)

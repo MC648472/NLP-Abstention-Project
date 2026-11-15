@@ -19,9 +19,9 @@ A compute-aware two-stage abstainer for `Qwen2.5-0.5B-Instruct` on SQuAD 2.0.
 | `src/run_fixed_coverage.py` | val-only threshold selection, fixed-coverage test table for M1 / M3 / two-stage |
 | `src/score_m2_m4.py` | scores B's M2-conf / M2-idk / M4 outputs into `results/m2_m4_table.csv` |
 | `src/bootstrap_ci.py` | paired bootstrap 95% CIs and McNemar tests |
-| `src/ablate_two_stage.py` | Stage-2 sample-count ablation (k = 3 / 5 / 8) |
+| `src/ablate_two_stage.py` | Stage-2 sample-count ablation (k = 3 / 5 / 8), with a hard consistency check against the main table |
 | `src/make_figures.py` | Figure 1 (pipeline) and Figure 2 (coverage vs accuracy), PIL only |
-| `run_all.bat` | runs the four table / figure scripts in order (Windows) |
+| `run_all.bat` | runs the five table / figure / ablation scripts in order (Windows) |
 | `slm_interface.py` | Zhang Lu's unified inference interface (`generate` / `sample`); the notebook has a local fallback |
 | `b_methods/` | Zhang Lu's M2 (`m2_verbal.py`) and M4 (`m4_lora.py`) implementations, the M4 pool builder, and `check_train_overlap.py` — see `b_methods/README.md` |
 | `models/` | M4 LoRA adapter (r50 weights + r30/r50/r70 configs and training logs) — see `models/README.md` |
@@ -30,6 +30,7 @@ A compute-aware two-stage abstainer for `Qwen2.5-0.5B-Instruct` on SQuAD 2.0.
 | `data/m4_train_pool.jsonl` | M4's training pool: 5,000 SQuAD 2.0 *train* questions (2,500 + 2,500) |
 | `results/` | main table, M2/M4 table, CIs, ablation, training-pool check, coverage–accuracy curves, per-question scored jsonl |
 | `figures/` | fig1 pipeline, fig2 coverage–quality–cost |
+| `docs/threshold_rule_decision.md` | official two-stage threshold rule, the fixed main-table/ablation numbers, and the 5%-grid sensitivity check |
 
 ## Reproduce the report tables (CPU, no GPU, no model)
 
@@ -41,7 +42,7 @@ python src/make_figures.py           # figures/fig1, figures/fig2
 python src/ablate_two_stage.py       # results/two_stage_ablation.csv   (a few minutes)
 ```
 
-`run_all.bat` runs the first four. Everything above reads `data/outputs_b/*.jsonl`
+`run_all.bat` runs all five. Everything above reads `data/outputs_b/*.jsonl`
 and needs only `numpy` + `Pillow` (see `requirements.txt`). Re-running the five
 scripts on this repository reproduces the committed `results/` and `figures/`
 files **byte for byte** — no numbers in the report come from anywhere else.
@@ -75,6 +76,12 @@ files **byte for byte** — no numbers in the report come from anywhere else.
   This, not 0%, is the line every abstention method has to beat.
 - Cost is reported as **average sequences per question**, not wall clock: sampling is batched,
   so 5 samples cost ≈1.8× the wall clock of 1, not 5×.
+- Two-stage thresholds are tuned on val by the pre-registered rule in
+  `docs/two_stage_spec.md`: `tau_low` / `tau_high` are **deciles** of the val M1 score,
+  `tau_c ∈ {0.2, 0.4, 0.6, 0.8, 1.0}`, configs must satisfy `|val coverage − target| ≤ 0.02`,
+  and ties go to fewer samples. The main table and the k ablation call the same function;
+  `src/ablate_two_stage.py` asserts that the k=5 row equals the main-table row. A 5% grid is
+  kept only as a sensitivity check (see `docs/threshold_rule_decision.md`), not as the headline.
 - M3 has only five consistency levels, so its minimum reachable coverage is 48.3%; the 0.3 target is
   reported at the closest reachable point. M2-conf's verbal confidence has only 11 distinct values on val.
   M2-idk and M4 refuse by themselves, so each has one natural operating point and no threshold.
@@ -96,6 +103,7 @@ files **byte for byte** — no numbers in the report come from anywhere else.
 | M2-conf / M2-idk / M4 rows | `results/m2_m4_table.csv` |
 | 95% CIs, paired differences, McNemar p | `results/ci_table.csv`, `results/pairwise_ci.csv` |
 | Stage-2 sample-count ablation | `results/two_stage_ablation.csv` |
+| Two-stage threshold-rule decision + 5%-grid sensitivity | `docs/threshold_rule_decision.md` |
 | coverage–accuracy curves (Figure 2) | `results/coverage_accuracy_curves.json` |
 
 ## What is reproducible and what is not
