@@ -221,6 +221,8 @@ __marimo__/
 
 # --- NLP-Abstention-Project ---
 squad_data/
+data/train-v2.0.json
+data/dev-v2.0.json
 *.safetensors
 *.bin
 *.pt
