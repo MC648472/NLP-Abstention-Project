@@ -7,8 +7,8 @@ A compute-aware two-stage abstainer for `Qwen2.5-0.5B-Instruct` on SQuAD 2.0.
 
 | Member | Scope |
 |---|---|
-| **A** | data pipeline and fixed splits, evaluation protocol and metrics, M1 / M3 baselines, two-stage compute-aware abstainer, statistics and figures |
-| **B** | unified inference interface, M2 (verbal confidence / "I don't know"), M4 (in-domain LoRA SFT), experiment runs, case analysis |
+| **Deng Yunfan** | data pipeline and fixed splits, evaluation protocol and metrics, M1 / M3 baselines, two-stage compute-aware abstainer, statistics and figures |
+| **Zhang Lu** | unified inference interface, M2 (verbal confidence / "I don't know"), M4 (in-domain LoRA SFT), experiment runs, case analysis |
 
 ## What is here
 
@@ -22,8 +22,8 @@ A compute-aware two-stage abstainer for `Qwen2.5-0.5B-Instruct` on SQuAD 2.0.
 | `src/ablate_two_stage.py` | Stage-2 sample-count ablation (k = 3 / 5 / 8) |
 | `src/make_figures.py` | Figure 1 (pipeline) and Figure 2 (coverage vs accuracy), PIL only |
 | `run_all.bat` | runs the four table / figure scripts in order (Windows) |
-| `slm_interface.py` | B's unified inference interface (`generate` / `sample`); the notebook has a local fallback |
-| `b_methods/` | B's M2 (`m2_verbal.py`) and M4 (`m4_lora.py`) implementations, the M4 pool builder, and `check_train_overlap.py` — see `b_methods/README.md` |
+| `slm_interface.py` | Zhang Lu's unified inference interface (`generate` / `sample`); the notebook has a local fallback |
+| `b_methods/` | Zhang Lu's M2 (`m2_verbal.py`) and M4 (`m4_lora.py`) implementations, the M4 pool builder, and `check_train_overlap.py` — see `b_methods/README.md` |
 | `models/` | M4 LoRA adapter (r50 weights + r30/r50/r70 configs and training logs) — see `models/README.md` |
 | `data/items/` | fixed val / test questions and gold (500 answerable + 500 unanswerable each, seed 42) |
 | `data/outputs_b/` | cached M1 / M3 / M2 / M4 generations, so every table can be rebuilt without a GPU |
@@ -126,6 +126,6 @@ Rules that keep the merge clean:
 
 - `results/` and `figures/` are **generated**: after the merge, A re-runs the five scripts and commits the
   regenerated files once. B does not commit them.
-- `src/abstention_eval.py` has exactly one copy and one owner (A); B's changes to it come as a diff.
+- `src/abstention_eval.py` has exactly one copy and one owner (A); Zhang Lu's changes to it come as a diff.
 - The presentation deck and the report are binary files; they are submitted through Moodle and kept out of
   this repository on purpose.

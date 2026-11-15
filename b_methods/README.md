@@ -1,8 +1,8 @@
-# B's methods: M2 (verbal confidence / "I don't know") and M4 (LoRA SFT)
+# Zhang Lu's methods: M2 (verbal confidence / "I don't know") and M4 (LoRA SFT)
 
 Everything here scores with `src/abstention_eval.py`, the same file A uses, so the
-numbers are on one scale. All three modules were written by B; `check_train_overlap.py`
-is A's verification script for B's training pool.
+numbers are on one scale. All three modules were written by Zhang Lu; `check_train_overlap.py`
+is Deng Yunfan's verification script for Zhang Lu's training pool.
 
 | File | What it does |
 |---|---|
