@@ -14,7 +14,7 @@ A compute-aware two-stage abstainer for `Qwen2.5-0.5B-Instruct` on SQuAD 2.0.
 
 | Path | Content |
 |---|---|
-| `Abstention_in_Small_Language_Models.ipynb` | runnable Colab notebook: data, metrics, M1, M3, two-stage, 5-question demo, full 1,000-question run |
+| `Abstention_in_Small_Language_Models.ipynb` | the one runnable notebook: data, metrics, M1, M3, two-stage, M2, M4, the refusal-share ablation, a 5-question demo and the full 1,000-question run |
 | `src/abstention_eval.py` | **the only** scoring implementation (coverage / selective accuracy / correct refusal / over-refusal / cost, plus threshold helpers); both members score with this file |
 | `src/run_fixed_coverage.py` | val-only threshold selection, fixed-coverage test table for M1 / M3 / two-stage |
 | `src/score_m2_m4.py` | scores B's M2-conf / M2-idk / M4 outputs into `results/m2_m4_table.csv` |
@@ -50,14 +50,17 @@ files **byte for byte** — no numbers in the report come from anywhere else.
 
 1. Open the notebook in Colab, `Runtime -> Change runtime type -> T4 GPU`.
 2. `!git clone https://github.com/MC648472/NLP-Abstention-Project.git` then `%cd NLP-Abstention-Project`.
-3. Run the cells top to bottom. `src/abstention_eval.py` is found automatically.
+3. Run the cells top to bottom. `src/abstention_eval.py`, `b_methods/` and `slm_interface.py` are found
+   automatically.
 4. Default mode is a **5-question end-to-end demo** (`RUN_QUICK_DEMO=True`), about 1–2 minutes on a T4.
-   For the full 1,000-question table set `RUN_FULL_EXPERIMENT=True` in the last code cell; it stores
-   8 samples per question, scores the first 5, tunes thresholds on val only, and writes
-   `results/notebook_main_table.csv` (the curated report table stays at `results/main_table_fixed_coverage.csv`).
-5. To show the already-computed report tables without a GPU, set both flags to `False` and run
-   `show_cached_results()`.
-6. Cell 26 is the one-question live demo used in the presentation video (answered / correctly refused /
+   For the full 1,000-question table set `RUN_FULL_EXPERIMENT=True` (section 10); it stores 8 samples per
+   question, scores the first 5, tunes thresholds on val only, and writes `results/notebook_main_table.csv`
+   (the curated report table stays at `results/main_table_fixed_coverage.csv`).
+5. B's methods are behind their own flags: `RUN_M2=True` (section 11, both M2 variants, ≈10 min),
+   `RUN_M4_TRAIN=True` / `RUN_M4_INFER=True` (section 12, retrain 3.6 min / re-infer with the committed
+   adapter). Section 13 scores the r30 / r50 / r70 ablation from the committed generations — CPU only.
+6. With every flag `False` the notebook needs no GPU: it prints the cached tables and the M4 case list.
+7. Section 15 is the one-question live demo used in the presentation video (answered / correctly refused /
    answered although it should have refused), at the val-tuned 0.3-coverage operating point.
 
 ## Protocol
