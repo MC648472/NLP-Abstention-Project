@@ -1,0 +1,171 @@
+{
+ "over_refusal": [
+  {
+   "id": "57376828c3c5551400e51eb9",
+   "question": "How are forces classified with regard to push and pull strengt?",
+   "gold": [
+    "vector quantities",
+    "vector quantities",
+    "vector quantities",
+    "\"vector quantities\"",
+    "dependent upon how strong"
+   ],
+   "m4_answer": "I don't know",
+   "base_answer": "Vector quantities"
+  },
+  {
+   "id": "572759dbdd62a815002e9b97",
+   "question": "In addition to endowments and tuition, how do boarding schools cover their operating costs?",
+   "gold": [
+    "fundraising",
+    "fundraising drives",
+    "fundraising drives"
+   ],
+   "m4_answer": "I don't know",
+   "base_answer": "fundraising"
+  },
+  {
+   "id": "572863363acd2414000df987",
+   "question": "In the fall quarter of 2014, how many students signed up for the university's professional schools?",
+   "gold": [
+    "5,984",
+    "5,984",
+    "5,984"
+   ],
+   "m4_answer": "I don't know",
+   "base_answer": "5,984"
+  },
+  {
+   "id": "572feddda23a5019007fcb5c",
+   "question": "When did the Rhine Straightening program begin?",
+   "gold": [
+    "19th Century",
+    "19th",
+    "19th Century"
+   ],
+   "m4_answer": "I don't know",
+   "base_answer": "19th century"
+  },
+  {
+   "id": "5705f09e75f01819005e77a4",
+   "question": "Other than land laws, what else were the Californios dissatisfied with?",
+   "gold": [
+    "inequitable taxes",
+    "inequitable taxes",
+    "inequitable taxes"
+   ],
+   "m4_answer": "I don't know",
+   "base_answer": "inequitable taxes"
+  },
+  {
+   "id": "56e17644e3433e1400422f42",
+   "question": "What field of computer science analyzes all possible algorithms in aggregate to determine the resource requirements needed to solve to a given problem?",
+   "gold": [
+    "computational complexity theory",
+    "computational complexity theory",
+    "computational complexity theory"
+   ],
+   "m4_answer": "I don't know",
+   "base_answer": "Computational complexity theory"
+  },
+  {
+   "id": "573009a004bcaa1900d77050",
+   "question": "When was the Rhine fully within the Holy Roman Empire?",
+   "gold": [
+    "10th century",
+    "10th century",
+    "10th century"
+   ],
+   "m4_answer": "I don't know",
+   "base_answer": "10th century"
+  },
+  {
+   "id": "571156152419e3140095559f",
+   "question": "What was the average duty of a low-pressure Watt engine?",
+   "gold": [
+    "17",
+    "17.",
+    "17"
+   ],
+   "m4_answer": "I don't know",
+   "base_answer": "17"
+  },
+  {
+   "id": "571cca4add7acb1400e4c154",
+   "question": "When did oxygen begin to move from the oceans to the atmosphere?",
+   "gold": [
+    "3–2.7 billion years ago",
+    "3–2.7 billion years ago",
+    "3–2.7 billion years ago",
+    "3–2.7 billion years ago",
+    "3–2.7 billion years ago"
+   ],
+   "m4_answer": "I don't know",
+   "base_answer": "3–2.7 billion years ago"
+  },
+  {
+   "id": "57265d08708984140094c398",
+   "question": "Which parts of the Earth are included in the lithosphere?",
+   "gold": [
+    "the crust and rigid uppermost portion of the upper mantle",
+    "crust and rigid uppermost portion of the upper mantle",
+    "crust and rigid uppermost portion of the upper mantle",
+    "crust and rigid uppermost portion of the upper mantle"
+   ],
+   "m4_answer": "I don't know",
+   "base_answer": "crust and rigid uppermost portion of upper mantle"
+  }
+ ],
+ "missed_refusal": [
+  {
+   "id": "5ad3a266604f3c001a3fea2a",
+   "question": "Who ruled the country of Normandy?",
+   "m4_answer": "Richard I of Normandy"
+  },
+  {
+   "id": "5ad04bfc77cf76001a686f98",
+   "question": "What is the busiest airport by passenger volume in the United States?",
+   "m4_answer": "Los Angeles International Airport"
+  },
+  {
+   "id": "5ad4cc135b96ef001a10a0f4",
+   "question": "When did the Red Army Uprising begin?",
+   "m4_answer": "1 August 1944"
+  },
+  {
+   "id": "5a6cb5c14eec6b001a80a625",
+   "question": "What did the English root pharmakos imply?",
+   "m4_answer": "sorcery or even poison"
+  },
+  {
+   "id": "5ad3fd68604f3c001a3ffbe8",
+   "question": "What was Fecamp Abby the center of?",
+   "m4_answer": "musical production and education"
+  },
+  {
+   "id": "5ad2678ad7d075001a42922c",
+   "question": "What do rapid concentrated sources of oxygen promote?",
+   "m4_answer": "rapid combustion"
+  },
+  {
+   "id": "5a2ebaada83784001a7d243d",
+   "question": "In what month and year did the Black Death spread into France?",
+   "m4_answer": "June 1348"
+  },
+  {
+   "id": "5ad26000d7d075001a428fb1",
+   "question": "What type of reaction produces oxygen in plane cabins?",
+   "m4_answer": "exothermic"
+  },
+  {
+   "id": "5ad24369d7d075001a4289ea",
+   "question": "What is the ground state of the O molecule referred to as?",
+   "m4_answer": "triplet oxygen"
+  },
+  {
+   "id": "5ad263d9d7d075001a429124",
+   "question": "In what year did Rev. Elie Prioleau become the pastor of the first Huguenot church in Charleston, South Carolina?",
+   "m4_answer": "1685"
+  }
+ ]
+}

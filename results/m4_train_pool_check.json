@@ -1,0 +1,18 @@
+{
+ "pool_file": "data\\m4_train_pool.jsonl",
+ "pool_n": 5000,
+ "pool_answerable": 2500,
+ "pool_unanswerable": 2500,
+ "pool_unique_ids": 5000,
+ "val_n": 1000,
+ "test_n": 1000,
+ "overlap_pool_val": 0,
+ "overlap_pool_test": 0,
+ "sha256": {
+  "m4_train_pool.jsonl": "718eadbdcca6cb8a85c35b582424bf70d83ced7903dea0097c274b235c098778",
+  "b_gold_val.jsonl": "ad18d615a72347fc5db79b3553fd657785876957f319cc368671c074895243e3",
+  "b_gold_test.jsonl": "7da194a7389ce3e2c6ed6517a195c9ee0d227b7911e2caf5049a002912c905ed"
+ },
+ "confirmed_from_train_split": null,
+ "passed": true
+}

@@ -23,9 +23,12 @@ A compute-aware two-stage abstainer for `Qwen2.5-0.5B-Instruct` on SQuAD 2.0.
 | `src/make_figures.py` | Figure 1 (pipeline) and Figure 2 (coverage vs accuracy), PIL only |
 | `run_all.bat` | runs the four table / figure scripts in order (Windows) |
 | `slm_interface.py` | B's unified inference interface (`generate` / `sample`); the notebook has a local fallback |
+| `b_methods/` | B's M2 (`m2_verbal.py`) and M4 (`m4_lora.py`) implementations, the M4 pool builder, and `check_train_overlap.py` — see `b_methods/README.md` |
+| `models/` | M4 LoRA adapter (r50 weights + r30/r50/r70 configs and training logs) — see `models/README.md` |
 | `data/items/` | fixed val / test questions and gold (500 answerable + 500 unanswerable each, seed 42) |
 | `data/outputs_b/` | cached M1 / M3 / M2 / M4 generations, so every table can be rebuilt without a GPU |
-| `results/` | main table, M2/M4 table, CIs, ablation, coverage–accuracy curves, per-question scored jsonl |
+| `data/m4_train_pool.jsonl` | M4's training pool: 5,000 SQuAD 2.0 *train* questions (2,500 + 2,500) |
+| `results/` | main table, M2/M4 table, CIs, ablation, training-pool check, coverage–accuracy curves, per-question scored jsonl |
 | `figures/` | fig1 pipeline, fig2 coverage–quality–cost |
 
 ## Reproduce the report tables (CPU, no GPU, no model)
@@ -95,9 +98,15 @@ files **byte for byte** — no numbers in the report come from anywhere else.
 - **Reproducible on CPU**: cached generations → every table and both figures, byte-identical.
 - **Reproducible on GPU**: M1 / M3 / two-stage inference in the notebook. M3 samples are seeded per qid,
   so a subset re-run uses the same samples as the full run.
-- **Not in this repository**: M2's prompt / parsing code and M4's LoRA SFT training script, config and
-  adapter. Those live on B's branch and on Google Drive; the committed `data/outputs_b/` files are the
-  frozen generations the tables are built from. M4's *scoring* is reproducible here, its *training* is not.
+- **Reproducible on GPU (B's part)**: M2-conf / M2-idk prompts and parsing (`b_methods/m2_verbal.py`),
+  M4's training-set construction and LoRA training (`b_methods/m4_lora.py`), and M4 inference with the
+  committed r50 adapter. Training the reported adapter takes 3.6 min and peaks at 9.0 GB on a T4.
+- **Evidence for "no leak"**: `python b_methods/check_train_overlap.py` reports
+  `|pool ∩ val| = |pool ∩ test| = 0` for the 5,000-question pool and writes sha256 of the pool and both
+  gold files to `results/m4_train_pool_check.json`. Add `squad_data/train-v2.0.json` (not committed,
+  41 MB) and it also proves every pool id occurs in the SQuAD **train** split.
+- **Not in this repository**: the r30 / r70 adapter weights (configs and logs are here; retrain or take
+  them from the project Drive folder) and the raw SQuAD json files.
 
 ## Branch layout
 
