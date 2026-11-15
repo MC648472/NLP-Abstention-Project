@@ -32,7 +32,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path[:0] = [str(ROOT / "src"), str(ROOT / "b_methods")]
+sys.path[:0] = [str(ROOT), str(ROOT / "src"), str(ROOT / "b_methods")]
 
 import abstention_eval as ev  # noqa: E402
 import m4_lora as m4  # noqa: E402
