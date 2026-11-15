@@ -59,8 +59,10 @@ files **byte for byte** — no numbers in the report come from anywhere else.
 5. B's methods are behind their own flags: `RUN_M2=True` (section 11, both M2 variants, ≈10 min),
    `RUN_M4_TRAIN=True` / `RUN_M4_INFER=True` (section 12, retrain 3.6 min / re-infer with the committed
    adapter). Section 13 scores the r30 / r50 / r70 ablation from the committed generations — CPU only.
+   Section 14 is the threshold-free diagnostic: AUROC labelled by *would the forced answer be correct*,
+   the mean `avg_logprob` of the three question buckets, and the conditional refusal rates — also CPU only.
 6. With every flag `False` the notebook needs no GPU: it prints the cached tables and the M4 case list.
-7. Section 15 is the one-question live demo used in the presentation video (answered / correctly refused /
+7. Section 16 is the one-question live demo used in the presentation video (answered / correctly refused /
    answered although it should have refused), at the val-tuned 0.3-coverage operating point.
 
 ## Protocol
