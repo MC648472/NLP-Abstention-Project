@@ -56,3 +56,31 @@ Training the reported adapter took **3.6 min** (213 s) and peaked at **9.0 GB** 
 - Refusal-ratio ablation (r30 = 30% refusal, r50 = 50%, r70 = 70%): logs in
   `models/m4_lora_r*/train_log.json`, generations in `data/outputs_b/slm_m4r30_*.jsonl`
   and `slm_m4r70_test.jsonl`. The reported row is **r50** (`slm_m4_*.jsonl`).
+
+## Answer-only control: what part of M4's gain is domain QA?
+
+`train_answer_only.py` trains the identical LoRA recipe on **answerable examples only**
+(no refusal targets), at two sizes, so M4 and the control differ in one thing: whether the
+refusal examples are in the SFT set. Test set, 1,000 questions:
+
+| run | SFT set | answers (of 500 answerable) | acc. on what it answers | acc. on all 500 answerable | overall |
+|---|---|---|---|---|---|
+| `ao1500` | 1,500 answerable | 500 (100%) | 73.2% | 73.2% | 36.6% |
+| `ao750` | 750 answerable | 500 (100%) | 70.6% | 70.6% | 35.3% |
+| **M4** | 750 answerable + 750 refusal | 290 (58%) | 80.0% | 46.4% | **65.2%** |
+| M1 | — | 500 (100%) | — | 58.2% | — |
+
+- Both controls **never refuse** (over-refusal 0.000), so their overall accuracy stays below
+  the 50.0% always-abstain line. M4's +28.6 points over the control is the value of the
+  learned refusal decision, not of better answering.
+- Domain QA alone lifts accuracy on answerable questions from 58.2% (M1) to 73.2%, i.e. about
+  15 of M4's points are "learned to answer SQuAD".
+- M4's 80.0% is measured on the 290 questions it chose to answer, so it must be compared with
+  the controls **restricted to the same ids**; `compare_controls.py` does that (on those 290,
+  M1 gets 66.2%) and writes the full decomposition to `results/m4_attribution.json`.
+
+Colab note: if `get_peft_model` raises `ImportError: Found an incompatible version of
+torchao`, run `!pip uninstall -y torchao` — Colab ships torchao 0.10, newer peft wants
+> 0.16, and this project does not use quantized LoRA. On a T4 the fp32 base + fp16 autocast
+sits near the memory limit (8.4–8.7 GB peak); transient allocator OOM warnings do not stop
+training.
