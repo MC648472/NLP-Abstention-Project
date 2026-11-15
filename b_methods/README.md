@@ -75,9 +75,15 @@ refusal examples are in the SFT set. Test set, 1,000 questions:
   learned refusal decision, not of better answering.
 - Domain QA alone lifts accuracy on answerable questions from 58.2% (M1) to 73.2%, i.e. about
   15 of M4's points are "learned to answer SQuAD".
-- M4's 80.0% is measured on the 290 questions it chose to answer, so it must be compared with
-  the controls **restricted to the same ids**; `compare_controls.py` does that (on those 290,
-  M1 gets 66.2%) and writes the full decomposition to `results/m4_attribution.json`.
+- M4's 80.0% is measured on the 290 questions it chose to answer. Restricted to those same
+  ids: M1 66.2%, ao750 79.0%, ao1500 **80.7%**, M4 80.0% — M4 and the answer-only control are
+  **not different** (Δ = −0.7 points, 95% CI [−4.1, +2.8], exact McNemar p = 0.85). On all 500
+  answerable questions M4 is 26.8 points *below* the control (95% CI [−31.2, −22.4]) because it
+  refuses 42% of them.
+- Bottom line: the refusal examples buy the **decision**, not better answers. All of M4's
+  answering quality comes from domain QA (58.2% → 73.2% on answerable), and its +28.6 points of
+  overall accuracy over the control (36.6% → 65.2%) come from refusing unanswerable questions.
+  `compare_controls.py` prints this decomposition and writes `results/m4_attribution.json`.
 
 Colab note: if `get_peft_model` raises `ImportError: Found an incompatible version of
 torchao`, run `!pip uninstall -y torchao` — Colab ships torchao 0.10, newer peft wants

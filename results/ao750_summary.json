@@ -1,0 +1,37 @@
+{
+ "tag": "ao750",
+ "max_n": 750,
+ "n_answerable": 750,
+ "n_refusal": 0,
+ "train_log": {
+  "train_time_s": 102,
+  "peak_mem_mb": 8444,
+  "note": "adapter + train_log.json were produced on Colab; timings copied from its stdout"
+ },
+ "splits": {
+  "val": {
+   "coverage": 1.0,
+   "selective_accuracy": 0.353,
+   "behaviour_accuracy": 0.353,
+   "correct_refusal_rate": 0.0,
+   "over_refusal_rate": 0.0,
+   "avg_samples": 1.0,
+   "avg_latency_s": 0.18697108024000636,
+   "answerable_answered": 500,
+   "answerable_answered_correct": 353,
+   "accuracy_on_answered_answerable": 0.706
+  },
+  "test": {
+   "coverage": 1.0,
+   "selective_accuracy": 0.353,
+   "behaviour_accuracy": 0.353,
+   "correct_refusal_rate": 0.0,
+   "over_refusal_rate": 0.0,
+   "avg_samples": 1.0,
+   "avg_latency_s": 0.19476156524599675,
+   "answerable_answered": 500,
+   "answerable_answered_correct": 353,
+   "accuracy_on_answered_answerable": 0.706
+  }
+ }
+}

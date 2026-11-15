@@ -60,6 +60,7 @@ def accuracy(gold_rows, pred_by_id, ids=None):
 
 def main():
     gold = ev.load_jsonl(GOLD)
+    gid = ev.index_by_id(gold)
     preds = {}
     for name, path in RUNS.items():
         if path.exists():
@@ -119,6 +120,35 @@ def main():
     print(f"selection effect (same model, different subset)   {d['selection_effect']:+.1%}")
 
     out = ROOT / "results" / "m4_attribution.json"
+
+    # paired test on the matched subset: is M4 really better than the answer-only control?
+    if "ao1500" in preds:
+        import numpy as np
+        from math import comb
+
+        ids = sorted(m4_answered)
+        a = np.array([int(ev.forced_correct(gid[i], preds["M4"][i]["answer"])) for i in ids])
+        b = np.array([int(ev.forced_correct(gid[i], preds["ao1500"][i]["answer"])) for i in ids])
+        b01 = int(((a == 0) & (b == 1)).sum())
+        b10 = int(((a == 1) & (b == 0)).sum())
+        n_disc = b01 + b10
+        p_mcnemar = (min(1.0, 2 * sum(comb(n_disc, k) for k in
+                                     range(0, min(b01, b10) + 1)) / 2 ** n_disc)
+                     if n_disc else 1.0)
+        d = a - b
+        rng = np.random.default_rng(0)
+        boots = [d[rng.integers(0, len(d), len(d))].mean() for _ in range(4000)]
+        lo, hi = np.percentile(boots, [2.5, 97.5])
+        report["matched_pair"] = {
+            "n": len(ids), "m4": float(a.mean()), "ao1500": float(b.mean()),
+            "delta": float(d.mean()), "ci_low": float(lo), "ci_high": float(hi),
+            "m4_wrong_control_right": b01, "m4_right_control_wrong": b10,
+            "mcnemar_p": p_mcnemar,
+        }
+        print(f"\nM4 vs answer-only on the same {len(ids)} questions: "
+              f"{a.mean():.1%} vs {b.mean():.1%}, delta {d.mean() * 100:+.1f} points "
+              f"(95% CI [{lo * 100:+.1f}, {hi * 100:+.1f}]), McNemar p = {p_mcnemar:.2f}")
+
     out.write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding="utf-8")
     print(f"\nwrote {out.relative_to(ROOT)}")
 

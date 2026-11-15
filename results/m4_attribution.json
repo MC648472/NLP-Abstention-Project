@@ -1,0 +1,49 @@
+{
+ "n_answerable": 500,
+ "m4_answered_answerable": 290,
+ "runs": {
+  "M1": {
+   "answered_answerable": 500,
+   "accuracy_all_answerable": 0.582,
+   "accuracy_on_m4_answered": 0.6620689655172414,
+   "n_m4_answered": 290
+  },
+  "ao1500": {
+   "answered_answerable": 500,
+   "accuracy_all_answerable": 0.732,
+   "accuracy_on_m4_answered": 0.8068965517241379,
+   "n_m4_answered": 290
+  },
+  "ao750": {
+   "answered_answerable": 500,
+   "accuracy_all_answerable": 0.706,
+   "accuracy_on_m4_answered": 0.7896551724137931,
+   "n_m4_answered": 290
+  },
+  "M4": {
+   "answered_answerable": 290,
+   "accuracy_all_answerable": 0.464,
+   "accuracy_on_m4_answered": 0.8,
+   "n_m4_answered": 290
+  }
+ },
+ "decomposition": {
+  "m1_forced_on_answerable": 0.582,
+  "domain_qa_gain_over_m1": 0.15000000000000002,
+  "refusal_training_cost_on_all_answerable": -0.26799999999999996,
+  "m4_answered_accuracy": 0.8,
+  "ao1500_on_same_subset": 0.8068965517241379,
+  "selection_effect": 0.336
+ },
+ "matched_pair": {
+  "n": 290,
+  "m4": 0.8,
+  "ao1500": 0.8068965517241379,
+  "delta": -0.006896551724137931,
+  "ci_low": -0.041379310344827586,
+  "ci_high": 0.027586206896551724,
+  "m4_wrong_control_right": 15,
+  "m4_right_control_wrong": 13,
+  "mcnemar_p": 0.8505540192127228
+ }
+}
