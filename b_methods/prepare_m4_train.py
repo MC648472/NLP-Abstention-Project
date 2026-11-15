@@ -1,19 +1,3 @@
-"""
-prepare_m4_train.py -- 从 SQuAD 2.0 的 *训练集* (train-v2.0.json) 里抽 M4 的训练题池。
-
-注意: A 同学的 val/test 都来自 dev-v2.0.json, M4 的训练数据必须来自 train-v2.0.json,
-      否则会和评测题重叠 (数据泄漏)。SQuAD 的 train 和 dev 文章不重叠, 互不影响。
-
-下载 (在 Colab 里):
-    !wget -P squad_data https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v2.0.json
-
-用法:
-    python prepare_m4_train.py --train squad_data/train-v2.0.json \
-        --out data/m4_train_pool.jsonl --per-class 2500
-
-输出每行: {"id","question","context","answers","is_impossible"}
-可答和不可答各抽 per-class 条, 之后由 m4_lora.build_train_examples 按需要的比例再抽样。
-"""
 import argparse
 import json
 import os

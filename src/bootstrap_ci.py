@@ -1,15 +1,3 @@
-"""Paired bootstrap CIs for the fixed-coverage table (no model, no B).
-
-Reads the six scored JSONL files written by run_fixed_coverage.py, resamples the
-1,000 questions with replacement (the same resample for every method, so the
-comparison is paired), and reports
-
-  * per-method 95% CI for selective accuracy and overall behaviour accuracy;
-  * pairwise differences vs M1 (and M3) with 95% CI and a McNemar test on the
-    overall decision correctness.
-
-Usage (project root):  python src/bootstrap_ci.py
-"""
 import csv
 import json
 import math

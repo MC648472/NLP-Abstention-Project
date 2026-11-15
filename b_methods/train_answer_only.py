@@ -1,30 +1,3 @@
-"""Answer-only LoRA control for M4 (A's attribution experiment, B's training code).
-
-M4 is trained on 750 answerable examples (gold answer as target) + 750 unanswerable
-examples ("I don't know"). This script trains the same LoRA setup on *answerable
-examples only*, so the two runs differ in exactly one thing: whether the refusal
-examples are in the SFT set.
-
-Two sizes, both useful:
-
-  --max-n 1500 --refusal-ratio 0.0   step-matched control (same 1,500 examples and
-                                      gradient steps as M4; content differs)
-  --max-n 750  --refusal-ratio 0.0   content-matched control (same 750 answerable
-                                      examples as M4, but half the steps)
-
-Everything else (r=8, alpha=16, dropout 0.05, 2 epochs, lr 2e-4, bs 4, max_len 512,
-seed 0) is identical to `models/m4_lora_r50`, so the comparison is apples to apples.
-
-Run on a T4 (from the repo root):
-
-    python b_methods/train_answer_only.py --max-n 1500 --tag ao1500
-    python b_methods/train_answer_only.py --max-n 750  --tag ao750
-
-Outputs:
-    models/m4_lora_<tag>/                      adapter + train_log.json
-    data/outputs_b/slm_<tag>_{val,test}.jsonl  generations (same format as M4's)
-    results/<tag>_summary.json                 coverage / selective / overall / refusal rates
-"""
 import argparse
 import json
 import os

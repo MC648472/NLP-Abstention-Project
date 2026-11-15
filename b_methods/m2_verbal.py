@@ -1,14 +1,3 @@
-"""
-m2_verbal.py  --  M2: Prompt 式口头置信度 / "I don't know" (B同学)
-
-适配 A 同学的 SQuAD 2.0 数据 (题目带原文 context)。
-两个版本:
-  version="conf": 让模型回答并自报 0-100 的置信度, 在 val 上调阈值, 低于阈值则拒答
-  version="idk" : 提示词里明确告诉模型"原文里没有答案就回答 I don't know", 不需要阈值
-
-评分一律调用 A 同学的 abstention_eval.py (判对错、拒答识别、阈值调整、全部指标),
-保证和 M1 / M3 / M4 口径完全一致。
-"""
 import json
 import math
 import os
@@ -18,9 +7,6 @@ from contextlib import contextmanager
 
 import abstention_eval as ev   # A 同学的评分模块, 放在同一个 code/ 文件夹
 
-# ----------------------------------------------------------------------
-# 1. 提示词 (M2 专用, 不影响全组统一的 SYSTEM_PROMPT)
-# ----------------------------------------------------------------------
 PROMPT_CONF = """You are a reading comprehension assistant.
 Read the context, then answer the question with a short phrase from the context.
 Then say how confident you are that your answer is correct, as a number from 0 to 100.
@@ -30,7 +16,6 @@ Answer: <short answer>
 Confidence: <number>"""
 
 # conf 版的示例以真实对话轮次放进提示 (小模型对这种方式的格式遵守更好)。
-# 4 个示例: 可答/不可答各 2 个, 只用于演示格式。
 FEWSHOT_CONF = [
     ("Paris is the capital and largest city of France.",
      "What is the capital of France?",
@@ -98,9 +83,6 @@ def use_prompt(slm, version):
             del slm._encode
 
 
-# ----------------------------------------------------------------------
-# 2. 解析模型输出
-# ----------------------------------------------------------------------
 def parse_conf(raw):
     """从 'Answer: xxx\nConfidence: 85' 取出答案和置信度 (0-100)。失败时 conf=None。"""
     ans_m = re.search(r"Answer:\s*(.*?)\s*(?:\n|Confidence:|$)", raw, re.S | re.I)
@@ -116,18 +98,11 @@ def parse_idk(raw):
     return (m.group(1) if m else raw).strip().split("\n")[0].strip()
 
 
-# ----------------------------------------------------------------------
-# 3. 批量运行 (可断点续跑)
-# ----------------------------------------------------------------------
 def load_jsonl(path):
     return ev.load_jsonl(path)
 
 
 def run_m2(slm, items, out_path, version="conf"):
-    """
-    items: A 同学的 b_items_val.jsonl / b_items_test.jsonl 读出来的列表
-    结果: 每题一行 JSONL (id / raw / answer / conf / parse_ok / time_s)
-    """
     os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
     done = set()
     if os.path.exists(out_path):
@@ -160,9 +135,6 @@ def run_m2(slm, items, out_path, version="conf"):
             f.flush()
 
 
-# ----------------------------------------------------------------------
-# 4. 用 A 的评分模块打分
-# ----------------------------------------------------------------------
 def build_preds(gold_rows, pred_by_id, version):
     """把 M2 结果整理成 A 的评分模块需要的格式。"""
     preds = []
@@ -186,11 +158,6 @@ def build_preds(gold_rows, pred_by_id, version):
 
 
 def score_m2(version, val_pred, val_gold, test_pred, test_gold, out_dir=None):
-    """
-    conf 版: 在 val 上用 A 的标准 (拒答 F1) 调阈值, 再用到 test。
-    idk 版:  不调阈值, 直接看模型有没有说 I don't know。
-    返回 (val 指标, test 指标, 阈值, test 逐题结果)。
-    """
     vg, tg = ev.load_jsonl(val_gold), ev.load_jsonl(test_gold)
     vg_by, tg_by = ev.index_by_id(vg), ev.index_by_id(tg)
     vp = build_preds(vg, ev.index_by_id(ev.load_jsonl(val_pred)), version)
@@ -239,14 +206,3 @@ def diagnostics(pred_path, gold_path):
     print("(三组平均值越接近, 说明自报置信度越没有区分能力)")
 
 
-# ----------------------------------------------------------------------
-# 用法 (Colab):
-#   import m2_verbal as m2
-#   val  = m2.load_jsonl(".../b_items_val.jsonl")
-#   test = m2.load_jsonl(".../b_items_test.jsonl")
-#   m2.run_m2(slm, val,  f"{OUT}/slm_m2conf_val.jsonl",  "conf")
-#   m2.run_m2(slm, test, f"{OUT}/slm_m2conf_test.jsonl", "conf")
-#   m2.diagnostics(f"{OUT}/slm_m2conf_val.jsonl", ".../b_gold_val.jsonl")
-#   m2.score_m2("conf", val_pred, val_gold, test_pred, test_gold, out_dir=OUT)
-#   (idk 版同理, 文件名用 slm_m2idk_*.jsonl, version="idk")
-# ----------------------------------------------------------------------

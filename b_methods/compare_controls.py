@@ -1,22 +1,3 @@
-"""Attribution: what part of M4's gain is domain QA, what part is the refusal decision.
-
-Reads the cached generations (CPU, no GPU, no model) and compares, on the same 1,000
-test questions:
-
-  M1        one greedy pass, never refuses            (baseline)
-  ao1500    LoRA SFT on 1,500 answerable examples      (domain-QA control)
-  ao750     LoRA SFT on 750 answerable examples        (content-matched control)
-  M4        LoRA SFT on 750 answerable + 750 refusal   (the reported method)
-
-The naive comparison "M4 80.0% vs M1 forced 58.2%" is not apples-to-apples: 80.0% is
-measured on the 290 answerable questions M4 chose to answer, while 58.2% is measured on
-all 500. This script therefore also reports every model **restricted to the exact
-question IDs that M4 answered**, which is the fair comparison.
-
-    python b_methods/compare_controls.py
-
-Writes results/m4_attribution.json and prints a table.
-"""
 import json
 import sys
 from pathlib import Path

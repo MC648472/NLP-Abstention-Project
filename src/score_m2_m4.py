@@ -1,8 +1,3 @@
-"""Score student B's M2 (two variants) and M4 outputs with the shared metrics.
-
-M2-conf reports a 0-1 confidence -> threshold on val, same protocol as M1/M3.
-M2-idk and M4 refuse by themselves -> no threshold, one natural operating point.
-"""
 import json
 import sys
 from pathlib import Path

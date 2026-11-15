@@ -1,14 +1,3 @@
-"""
-m4_lora.py  --  M4: LoRA 拒答微调 (B同学), 适配 A 同学的 SQuAD 2.0 数据
-
-流程:
-  1. 从 SQuAD 2.0 train 题池构造训练集: 可答 -> 标准答案, 不可答 -> "I don't know"
-  2. LoRA 训练 (fp32 底模 + fp16 混合精度, T4 可跑), 记录训练时长和峰值显存
-  3. 在 A 的 val/test 上推理, 用 A 的 abstention_eval 打分
-  4. 导出过度拒答 / 漏拒答案例
-
-训练和推理都使用全组统一的 SYSTEM_PROMPT (没有拒答指令), 拒答能力完全来自微调。
-"""
 import json
 import math
 import os
@@ -27,14 +16,7 @@ def load_jsonl(path):
     return ev.load_jsonl(path)
 
 
-# ----------------------------------------------------------------------
-# 1. 构造训练集
-# ----------------------------------------------------------------------
 def build_train_examples(pool, refusal_ratio=0.5, max_n=1500, seed=0):
-    """
-    pool: prepare_m4_train.py 生成的题池 (含 is_impossible)
-    refusal_ratio: 训练集中拒答样本占比 (默认 0.5)
-    """
     rng = random.Random(seed)
     can = [x for x in pool if not x["is_impossible"] and x.get("answers")]
     cannot = [x for x in pool if x["is_impossible"]]
@@ -53,9 +35,6 @@ def build_train_examples(pool, refusal_ratio=0.5, max_n=1500, seed=0):
     return ex
 
 
-# ----------------------------------------------------------------------
-# 2. 训练
-# ----------------------------------------------------------------------
 def _prompt_text(tok, question, context=None):
     """必须和 slm_interface._encode 完全一致, 否则训练和推理的提示词不匹配。"""
     user = question if not context else f"Context: {context}\nQuestion: {question}"
@@ -158,9 +137,6 @@ def train_lora(examples, out_dir, model_name=MODEL_NAME, epochs=2, lr=2e-4,
     return log
 
 
-# ----------------------------------------------------------------------
-# 3. 推理与评分 (评分全部用 A 的 abstention_eval)
-# ----------------------------------------------------------------------
 def infer_m4(lora_path, items, out_path):
     """加载微调后的模型, 对 A 的题目贪心推理, 结果格式和 M1 完全相同 (含 avg_logprob)。"""
     from slm_interface import SLM
@@ -175,10 +151,6 @@ def infer_m4(lora_path, items, out_path):
 
 
 def score_m4(pred_path, gold_path, out_path=None):
-    """
-    M4 的拒答完全来自模型自己输出的 'I don't know', 不再额外调阈值。
-    返回指标字典和逐题结果。
-    """
     gold = ev.load_jsonl(gold_path)
     gold_by = ev.index_by_id(gold)
     preds = ev.m1_preds(gold, ev.index_by_id(ev.load_jsonl(pred_path)))
@@ -192,15 +164,7 @@ def score_m4(pred_path, gold_path, out_path=None):
     return metrics, scored
 
 
-# ----------------------------------------------------------------------
-# 4. 案例分析
-# ----------------------------------------------------------------------
 def case_list(scored, gold_path, kind="over_refusal", base_pred_path=None, k=10):
-    """
-    kind="over_refusal":   可答题却被 M4 拒答 (过度拒答)。
-                           若给 base_pred_path (M1 结果), 只保留"底模其实答对"的题。
-    kind="missed_refusal": 不可答题 M4 却给了答案 (漏拒答)。
-    """
     gold_by = ev.index_by_id(ev.load_jsonl(gold_path))
     base = ev.index_by_id(ev.load_jsonl(base_pred_path)) if base_pred_path else None
     out = []

@@ -1,20 +1,3 @@
-"""Shared SQuAD 2.0 abstention evaluation utilities (student A's module).
-
-Pure Python + numpy, no torch/transformers, so both A and B can run it.
-
-Typical use from the command line:
-
-    python abstention_eval.py --mode m1 \
-        --val-pred slm_m1_val.jsonl --val-gold b_gold_val.jsonl \
-        --test-pred slm_m1_test.jsonl --test-gold b_gold_test.jsonl
-
-Prediction JSONL (greedy / M1): one line per question with at least
-    {"id": ..., "answer": ..., "avg_logprob": ...}
-Prediction JSONL (sample / M3): one line per question with at least
-    {"id": ..., "answers": [a1, ..., a8]}
-
-Gold JSONL: {"id": ..., "question": ..., "answers": [...], "is_impossible": bool}
-"""
 import argparse
 import json
 import math
@@ -24,9 +7,6 @@ from collections import Counter
 
 import numpy as np
 
-# ---------------------------------------------------------------------------
-# Normalisation and correctness (identical to the notebook)
-# ---------------------------------------------------------------------------
 REFUSAL_PATTERNS = [
     "i dont know", "i do not know", "dont know", "do not know",
     "cannot answer", "can not answer", "cant answer",
@@ -94,9 +74,6 @@ def forced_correct(record, prediction):
     return score_against_golds(prediction, record["answers"])[0] == 1
 
 
-# ---------------------------------------------------------------------------
-# Clustering for M3
-# ---------------------------------------------------------------------------
 def cluster_answers(answers):
     clusters = []
     for raw in answers:
@@ -126,9 +103,6 @@ def majority_answer(answers):
     return max(clusters, key=len)[0]
 
 
-# ---------------------------------------------------------------------------
-# Metrics
-# ---------------------------------------------------------------------------
 def coverage(preds):
     answered = [p for p in preds if not p["abstain"]]
     return len(answered) / len(preds) if preds else float("nan")
@@ -240,17 +214,12 @@ def evaluate(preds):
         "ece": ece_score(preds),
         "brier": brier(preds),
         # Overall decision accuracy: correct answers + correctly refused unanswerables.
-        # This is the metric to maximise when choosing a threshold; refusal F1 alone
-        # rewards refusing everything and collapses coverage to 11%.
         "behaviour_accuracy": float(np.mean([1 if p["correct"] else 0 for p in preds])) if preds else float("nan"),
         "avg_samples": float(np.mean([p["n_samples"] for p in preds])) if preds else float("nan"),
         "avg_latency_s": float(np.mean([p.get("latency_s") or 0.0 for p in preds])) if preds else float("nan"),
     }
 
 
-# ---------------------------------------------------------------------------
-# JSONL loading and prediction construction
-# ---------------------------------------------------------------------------
 def load_jsonl(path):
     rows = []
     with open(path, encoding="utf-8") as f:
@@ -311,9 +280,6 @@ def refusal_preds(gold_rows, pred_rows):
         pred = pred_rows[record["id"]]
         answer = pred.get("answer", "")
         abstain = is_abstention(answer)
-        # Priority: an explicit 0-1 confidence (M2 verbal confidence) > token logprob
-        # > a degenerate 1/0 indicator. Keeping the source explicit means M2/M4 are
-        # not silently scored on logprobs when B sends a `confidence` field.
         if pred.get("confidence") is not None:
             confidence = float(pred["confidence"])
             prob = min(max(confidence, 0.0), 1.0)
@@ -336,9 +302,6 @@ def refusal_preds(gold_rows, pred_rows):
     return preds
 
 
-# ---------------------------------------------------------------------------
-# Threshold tuning (val only)
-# ---------------------------------------------------------------------------
 def gold_should_abstain(record, pred):
     if record["is_impossible"]:
         return True
@@ -378,9 +341,6 @@ def apply_threshold(preds, gold_by_id, tau):
     return out
 
 
-# ---------------------------------------------------------------------------
-# Fixed-coverage operating points (the comparison protocol agreed with B)
-# ---------------------------------------------------------------------------
 def _answers_at(p, tau):
     return (not p.get("verbal_abstain", False)) and p["confidence"] >= tau
 
@@ -390,13 +350,6 @@ def coverage_at(preds, tau):
 
 
 def tune_at_coverage(preds, target_coverage):
-    """Val-only: tau whose coverage is closest to `target_coverage`.
-
-    Abstain iff confidence < tau, i.e. answered iff confidence >= tau.
-    Returns (tau, achieved_val_coverage). If the method cannot go that low
-    (e.g. M3's consistency only has 5 levels -> minimum coverage 0.49), the
-    closest reachable point is returned and the caller must flag it.
-    """
     levels = sorted({p["confidence"] for p in preds}, reverse=True)
     candidates = [levels[0] + 1e-9] + levels          # first one -> coverage 0
     best_tau, best_cov = candidates[0], 0.0
@@ -418,7 +371,6 @@ def behaviour_accuracy_at(preds, tau):
 
 
 def tune_by_accuracy(preds):
-    """Val-only: tau maximising overall behaviour accuracy (the honest objective)."""
     best_tau, best_acc = None, -1.0
     for tau in sorted({p["confidence"] for p in preds}):
         acc = behaviour_accuracy_at(preds, tau)
@@ -428,9 +380,6 @@ def tune_by_accuracy(preds):
 
 
 def risk_coverage_curve(preds):
-    """Step curve over distinct confidence levels (ties are never split, so the
-    curve is independent of record order). Only non-verbal answers are ranked;
-    verbal refusals are always abstentions."""
     n = len(preds)
     ranked = sorted([p for p in preds if not p.get("verbal_abstain", False)],
                     key=lambda p: -p["confidence"])
@@ -464,8 +413,6 @@ def risk_coverage_curve(preds):
 
 
 def interp_selective_accuracy(preds, target_coverage):
-    """Interpolated selective accuracy on the risk-coverage step curve.
-    Returns NaN when the target is outside the reachable coverage range."""
     pts = [p for p in risk_coverage_curve(preds)
            if p["selective_accuracy"] == p["selective_accuracy"]]   # drop the NaN at coverage 0
     xs = [p["coverage"] for p in pts]
@@ -481,9 +428,6 @@ def interp_selective_accuracy(preds, target_coverage):
     return float("nan")
 
 
-# ---------------------------------------------------------------------------
-# Two-stage abstainer (A's method) on cached M1 / M3 predictions
-# ---------------------------------------------------------------------------
 _JUDGE_CACHE = {}
 
 
@@ -498,7 +442,6 @@ def _judge_cached(gold_by_id, qid, answer, abstain):
 
 
 def simulate_two_stage(m1_preds, m3_preds, gold_by_id, tau_low, tau_high, tau_c):
-    """Stage 1 = M1 screening; borderline questions use M3's majority answer."""
     m3_by_id = {p["id"]: p for p in m3_preds}
     out = []
     for p1 in m1_preds:
@@ -532,28 +475,12 @@ def simulate_two_stage(m1_preds, m3_preds, gold_by_id, tau_low, tau_high, tau_c)
     return out
 
 
-#: Pre-registered Stage-1 threshold grid (A -> B handoff, docs/two_stage_spec.md):
-#: deciles of the val M1 score.  Both the main table and the k ablation must use
-#: this exact grid; a finer 5% grid was tried once and selected a different,
-#: much more expensive operating point, so it is not the official protocol.
 TWO_STAGE_QUANTILES = tuple(i / 10 for i in range(1, 10))
 TWO_STAGE_COVERAGE_TOL = 0.02
 
 
 def tune_two_stage_at_coverage(m1_preds, m3_preds, gold_by_id, target_coverage,
                                quantiles=None, coverage_tol=TWO_STAGE_COVERAGE_TOL):
-    """Grid-search (tau_low, tau_high, tau_c) on val for a target coverage.
-
-    Official protocol (shared by `run_fixed_coverage.py` and
-    `ablate_two_stage.py`):
-
-    * ``tau_low`` / ``tau_high`` are deciles of the val M1 score;
-    * ``tau_c`` is in {0.2, 0.4, 0.6, 0.8, 1.0};
-    * keep configs with ``|val coverage - target| <= 0.02``;
-    * maximise val behaviour accuracy, breaking ties by fewer samples.
-
-    Returns ((tau_low, tau_high, tau_c), val_accuracy, val_coverage).
-    """
     quantiles = quantiles or TWO_STAGE_QUANTILES
     scores = np.sort([p["confidence"] for p in m1_preds])
     cuts = sorted({float(np.quantile(scores, q)) for q in quantiles})

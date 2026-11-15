@@ -1,17 +1,3 @@
-"""Fixed-coverage comparison table for M1 / M3 / two-stage (student A).
-
-Protocol (same one A asked B to follow):
-  * the threshold is chosen on **val only**, as the one whose val coverage is
-    closest to the target (0.3 / 0.5);
-  * test is scored once with that threshold; the achieved test coverage is
-    reported, and `sel_acc_interp_at_target` linearly interpolates the test
-    risk-coverage curve to the exact target;
-  * metrics/tags/ids are identical to `abstention_eval.py`, i.e. the scorer B
-    has, so both sides produce the same numbers from the same JSONL.
-
-Usage (from the project root):
-    python src/run_fixed_coverage.py
-"""
 import csv
 import json
 import math
@@ -88,7 +74,6 @@ rows = []
 config = {}
 
 for target in TARGETS:
-    # --- threshold methods ---------------------------------------------------
     for name in ("M1", "M3_k5"):
         val_preds = method_preds(name, "val")
         tau, val_cov = ae.tune_at_coverage(val_preds, target)
@@ -119,7 +104,6 @@ for target in TARGETS:
         }
         write_jsonl(OUT / f"{name.lower()}_test_cov{target}_scored.jsonl", scored)
 
-    # --- two-stage -----------------------------------------------------------
     m1_val, m3_val = method_preds("M1", "val"), method_preds("M3_k5", "val")
     m1_test, m3_test = method_preds("M1", "test"), method_preds("M3_k5", "test")
     cfg, val_acc, val_cov = ae.tune_two_stage_at_coverage(
@@ -160,7 +144,6 @@ with (OUT / "main_table_fixed_coverage.csv").open("w", encoding="utf-8-sig", new
     w.writeheader()
     w.writerows(rows)
 
-# --- curves + baselines ------------------------------------------------------
 curves = {}
 for name in ("M1", "M3_k5"):
     curves[name] = ae.risk_coverage_curve(method_preds(name, "test"))

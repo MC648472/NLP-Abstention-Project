@@ -1,11 +1,3 @@
-"""Render the two report figures (PIL only - matplotlib is not installed here).
-
-  figures/fig1_two_stage_pipeline.png   - two-stage abstainer flowchart (report Figure 1)
-  figures/fig2_coverage_quality_cost.png - coverage vs selective / behaviour accuracy
-  figures/plot_data.csv                 - the exact points plotted (replot in Colab for PDF)
-
-Usage (project root):  python src/make_figures.py
-"""
 import csv
 import json
 import math
@@ -109,9 +101,6 @@ class Canvas:
         self.img.resize((w // S, h // S), Image.LANCZOS).save(path, dpi=(300, 300))
 
 
-# ---------------------------------------------------------------------------
-# Figure 1: two-stage pipeline
-# ---------------------------------------------------------------------------
 def fig1():
     W, H = 1500, 780
     c = Canvas(W, H)
@@ -154,9 +143,6 @@ def fig1():
     c.save(OUT / "fig1_two_stage_pipeline.png")
 
 
-# ---------------------------------------------------------------------------
-# Figure 2: coverage vs accuracy
-# ---------------------------------------------------------------------------
 def step(points):
     pts = sorted(points, key=lambda p: p[0])
     out, prev = [], None
@@ -229,12 +215,6 @@ def clean(pts, lo=0.03, hi=1.0):
 
 
 def load_two_stage_points():
-    """Read the official two-stage operating points from the generated main table.
-
-    Figure 2 must not hard-code them: the threshold grid (and therefore the
-    operating point) is owned by run_fixed_coverage.py, and a stale copy here is
-    exactly how the main table and the ablation drifted apart before.
-    """
     path = ROOT / "results" / "main_table_fixed_coverage.csv"
     with path.open(encoding="utf-8-sig") as fh:
         rows = [r for r in csv.DictReader(fh) if r["method"] == "TwoStage"]

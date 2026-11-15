@@ -1,17 +1,3 @@
-"""Build the exact val/test question files that student B should run.
-
-The split reproduces the notebook: SQuAD 2.0 dev, stratified 50/50 by
-answerability, then capped at 500 questions per bucket, seed 42.
-
-Outputs (in --out-dir):
-    b_items_val.jsonl / b_items_test.jsonl   -> feed to SLM.run_batch(items, ...)
-    b_gold_val.jsonl  / b_gold_test.jsonl    -> gold records for scoring
-
-Usage:
-    python prepare_b_items.py --dev squad_data/dev-v2.0.json --out-dir b_handoff
-or, if the notebook already wrote the splits:
-    python prepare_b_items.py --from-splits results --out-dir b_handoff
-"""
 import argparse
 import json
 import os

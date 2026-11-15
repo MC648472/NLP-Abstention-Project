@@ -1,17 +1,3 @@
-"""Ablation for the two-stage abstainer (A delivers, B reports).
-
-Varies the Stage-2 sample count k in {3, 5, 8} and compares, at fixed coverage
-(0.3 / 0.5), three cost-quality points:
-
-  M1           1 sequence / question
-  M3 @ k       k sequences / question
-  two-stage    1 + k * p sequences / question, p = fraction sent to Stage 2
-
-Everything runs on the cached M1 / M3 JSONL (the M3 file stores 8 samples, so
-k = 3 / 5 / 8 are scored from the same generations; no model calls).
-
-Output: results/two_stage_ablation.csv
-"""
 import csv
 import json
 import sys
@@ -44,7 +30,6 @@ rows = []
 for k in KS:
     m3 = {s: ae.m3_preds(gold[s], m3_raw[s], k=k) for s in gold}
     for target in TARGETS:
-        # --- pure single pass -------------------------------------------
         tau1, _ = ae.tune_at_coverage(m1["val"], target)
         m1t = ae.evaluate(ae.apply_threshold(m1["test"], gold_by_id["test"], tau1))
         rows.append({"method": "M1", "k": "", "target": target,
@@ -54,7 +39,6 @@ for k in KS:
                      "samples": 1.0, "stage2": 0.0,
                      "tau_low": "", "tau_high": "", "tau_c": ""})
 
-        # --- pure multi-sample consistency ------------------------------
         tau_c, _ = ae.tune_at_coverage(m3["val"], target)
         m3t = ae.evaluate(ae.apply_threshold(m3["test"], gold_by_id["test"], tau_c))
         rows.append({"method": "M3", "k": k, "target": target,
@@ -64,7 +48,6 @@ for k in KS:
                      "samples": float(k), "stage2": 0.0,
                      "tau_low": "", "tau_high": "", "tau_c": round(tau_c, 4)})
 
-        # --- two-stage --------------------------------------------------
         cfg, _, _ = ae.tune_two_stage_at_coverage(
             m1["val"], m3["val"], gold_by_id["val"], target)
         ts = ae.simulate_two_stage(m1["test"], m3["test"], gold_by_id["test"], *cfg)
@@ -92,10 +75,6 @@ with OUT.open("w", encoding="utf-8-sig", newline="") as f:
     w.writerows(rows)
 print("wrote", OUT)
 
-# --- guard against the exact drift this script once had --------------------
-# The k=5 two-stage row MUST equal the main-table row.  Before this check the
-# main table used a 5% threshold grid while the ablation used deciles, which
-# produced two different "k=5" results for the same method.
 main_path = ROOT / "results" / "main_table_fixed_coverage.csv"
 if main_path.exists():
     with main_path.open(encoding="utf-8-sig", newline="") as f:

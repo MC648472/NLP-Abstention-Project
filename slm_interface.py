@@ -1,17 +1,3 @@
-"""
-slm_interface.py  --  统一推理接口 (B同学负责, A同学的 M1 / M3 直接调用)
-
-功能:
-  1. generate(question)          单次贪心生成, 返回答案 + 每个token的对数概率 (给 M1 用)
-  2. sample(question, n)         多次随机采样, 返回 n 个答案 (给 M3 用)
-  3. run_batch(items, out_path)  批量运行, 逐题写入 JSONL, 断线后可从上次位置继续
-  4. 资源统计: 单题耗时 / 峰值显存
-
-用法见文件底部的 __main__ 示例, 或 Colab 里:
-    from slm_interface import SLM
-    slm = SLM()
-    print(slm.generate("Who wrote Hamlet?"))
-"""
 import json
 import os
 import time
@@ -49,9 +35,6 @@ class SLM:
         self.model.eval()
         self.special_ids = set(self.tok.all_special_ids)
 
-    # ------------------------------------------------------------------
-    # 内部工具
-    # ------------------------------------------------------------------
     def _encode(self, question, context=None):
         """把问题 (可选: 加原文段落) 变成模型输入。"""
         user = question if not context else f"Context: {context}\nQuestion: {question}"
@@ -68,9 +51,6 @@ class SLM:
             torch.cuda.synchronize()
         return time.perf_counter()
 
-    # ------------------------------------------------------------------
-    # 1. 单次贪心生成 (M1 / M2 / M4 使用)
-    # ------------------------------------------------------------------
     @torch.no_grad()
     def generate(self, question, context=None):
         inputs = self._encode(question, context)
@@ -111,9 +91,6 @@ class SLM:
             "time_s": dt,
         }
 
-    # ------------------------------------------------------------------
-    # 2. 多次随机采样 (M3 使用)
-    # ------------------------------------------------------------------
     @torch.no_grad()
     def sample(self, question, n=5, temperature=0.7, top_p=0.95,
                context=None, seed=None):
@@ -142,17 +119,8 @@ class SLM:
         ]
         return {"answers": answers, "n": n, "time_s": dt}
 
-    # ------------------------------------------------------------------
-    # 3. 批量运行, 可断点续跑
-    # ------------------------------------------------------------------
     def run_batch(self, items, out_path, mode="greedy", n=8,
                   temperature=0.7, seed=0):
-        """
-        items: [{"id": ..., "question": ..., "context": 可选, "gold": 可选}, ...]
-        mode:  "greedy" (单次生成) 或 "sample" (多次采样, 建议 n=8 一次存好,
-               之后用前3/5/8个答案即可, 不用重复跑模型)
-        out_path: 结果文件 (.jsonl), 建议放在 Google Drive 里
-        """
         os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
         done = set()
         if os.path.exists(out_path):
@@ -186,9 +154,6 @@ class SLM:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
                 f.flush()
 
-    # ------------------------------------------------------------------
-    # 4. 显存统计
-    # ------------------------------------------------------------------
     def reset_peak_memory(self):
         if self.device == "cuda":
             torch.cuda.reset_peak_memory_stats()

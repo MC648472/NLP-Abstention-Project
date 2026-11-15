@@ -1,23 +1,3 @@
-"""Check that M4's training pool is disjoint from the val / test splits.
-
-This is the evidence behind the sentence in the report: *M4 is trained on SQuAD 2.0
-train only; the qid overlap with val and test is zero*. Run it from the repo root:
-
-    python b_methods/check_train_overlap.py
-
-It prints and writes `results/m4_train_pool_check.json`:
-
-  * number of pool records, answerable / unanswerable counts;
-  * |pool ∩ val| and |pool ∩ test| (must both be 0);
-  * sha256 of the pool and of both gold files, so the check can be tied to exact files.
-
-If `squad_data/train-v2.0.json` (or `data/train-v2.0.json`) is present it additionally
-verifies that every pool id really occurs in the SQuAD *train* split and in no dev
-question. Download it with
-
-    wget -P squad_data https://rajpurkar.github.io/SQuAD-explorer/dataset/train-v2.0.json
-    wget -P squad_data https://rajpurkar.github.io/SQuAD-explorer/dataset/dev-v2.0.json
-"""
 import hashlib
 import json
 import sys
