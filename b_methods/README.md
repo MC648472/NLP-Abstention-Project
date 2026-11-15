@@ -40,6 +40,10 @@ metrics, scored = m4.score_m4("data/outputs_b/slm_m4_test.jsonl", gold_test,
                               "results/m4_test_scored.jsonl")
 ```
 
+> Note: `m2.score_m2` uses the legacy refusal-F1 threshold rule. The M2-conf numbers in the report
+> and in `results/m2_m4_table.csv` come from `python src/score_m2_m4.py`, which uses the fixed-coverage
+> protocol.
+
 Training the reported adapter took **3.6 min** (213 s) and peaked at **9.0 GB** on a T4;
 1,490 of 1,500 examples fit in 512 tokens (the other 10 were dropped).
 
@@ -71,8 +75,9 @@ refusal examples are in the SFT set. Test set, 1,000 questions:
 | M1 | — | 500 (100%) | — | 58.2% | — |
 
 - Both controls **never refuse** (over-refusal 0.000), so their overall accuracy stays below
-  the 50.0% always-abstain line. M4's +28.6 points over the control is the value of the
-  learned refusal decision, not of better answering.
+  the 50.0% always-abstain line. M4's +28.6 points over the control are dominated by the
+  refusal decision (correct refusals minus over-refusals); they cannot be separated strictly
+  from the control's own in-domain QA gain (report §6.2/7.2).
 - Domain QA alone lifts accuracy on answerable questions from 58.2% (M1) to 73.2%, i.e. about
   15 of M4's points are "learned to answer SQuAD".
 - M4's 80.0% is measured on the 290 questions it chose to answer. Restricted to those same
