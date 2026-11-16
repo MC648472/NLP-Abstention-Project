@@ -117,11 +117,12 @@ for target in TARGETS:
         "val_coverage": fnum(val_cov), "test_coverage": fnum(m["coverage"]),
         "n_answered": int(round(m["coverage"] * m["n"])),
         "selective_accuracy": fnum(m["selective_accuracy"]),
-        "sel_acc_interp_at_target": fnum(ae.interp_selective_accuracy(ts, target)),
+        # Mixed scores: interpolation is not valid.
+        "sel_acc_interp_at_target": "",
         "behaviour_accuracy": fnum(m["behaviour_accuracy"]),
         "correct_refusal_rate": fnum(m["correct_refusal_rate"]),
         "over_refusal_rate": fnum(m["over_refusal_rate"]),
-        # confidence mixes logprob (stage 1) and consistency (stage 2) -> AUROC invalid
+        # AUROC is not valid for mixed scores.
         "auroc": "", "auprc": "",
         "avg_samples": fnum(m["avg_samples"], 2),
         "avg_latency_s": fnum(m["avg_latency_s"], 4),

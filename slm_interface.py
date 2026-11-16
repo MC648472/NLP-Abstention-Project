@@ -7,7 +7,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 MODEL_NAME = "Qwen/Qwen2.5-0.5B-Instruct"
 
-# 全组统一的提示词, 不要随便改, 否则各方法的结果不可比
+# Shared system prompt.
 SYSTEM_PROMPT = "Answer the question with a short phrase only. Do not explain."
 MAX_NEW_TOKENS = 32
 
@@ -21,12 +21,12 @@ class SLM:
         self.max_new_tokens = max_new_tokens
 
         self.tok = AutoTokenizer.from_pretrained(model_name)
-        if self.tok.pad_token is None:      # 防止 pad_token 缺失 (Qwen2.5 通常已有, 不影响现有结果)
+        if self.tok.pad_token is None:      # Fall back to EOS if pad_token is missing.
             self.tok.pad_token = self.tok.eos_token
         self.model = AutoModelForCausalLM.from_pretrained(
             model_name, torch_dtype=dtype).to(self.device)
 
-        # M4 训练完后, 传入 lora_path 即可加载微调后的模型
+        # Optional LoRA adapter.
         if lora_path:
             from peft import PeftModel
             self.model = PeftModel.from_pretrained(self.model, lora_path)
@@ -36,7 +36,7 @@ class SLM:
         self.special_ids = set(self.tok.all_special_ids)
 
     def _encode(self, question, context=None):
-        """把问题 (可选: 加原文段落) 变成模型输入。"""
+        """Build the model input for one question."""
         user = question if not context else f"Context: {context}\nQuestion: {question}"
         msgs = [
             {"role": "system", "content": self.system_prompt},
@@ -71,7 +71,7 @@ class SLM:
         gen_ids = out.sequences[0, n_in:].tolist()
         tokens, logprobs, kept_ids = [], [], []
         for i, tid in enumerate(gen_ids):
-            if tid in self.special_ids:      # 跳过结束符等特殊token
+            if tid in self.special_ids:      # Skip special tokens (EOS etc.).
                 continue
             lp = torch.log_softmax(out.scores[i][0].float(), dim=-1)[tid].item()
             kept_ids.append(tid)
@@ -85,7 +85,7 @@ class SLM:
             "tokens": tokens,
             "token_logprobs": logprobs,
             "sum_logprob": sum(logprobs) if n_tok else -99.0,
-            # M1 的置信度分数: 长度归一化对数概率 (越大越有把握)
+            # Length-normalised log-probability (higher = more confident).
             "avg_logprob": (sum(logprobs) / n_tok) if n_tok else -99.0,
             "n_tokens": n_tok,
             "time_s": dt,
@@ -120,8 +120,10 @@ class SLM:
         return {"answers": answers, "n": n, "time_s": dt}
 
     def run_batch(self, items, out_path, mode="greedy", n=8,
-                  temperature=0.7, seed=0):
+                  temperature=0.7, seed=0, overwrite=False):
         os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+        if overwrite and os.path.exists(out_path):
+            os.remove(out_path)
         done = set()
         if os.path.exists(out_path):
             with open(out_path, encoding="utf-8") as f:

@@ -12,7 +12,7 @@ import m4_lora as m4  # noqa: E402
 
 
 def accuracy_on_answered_answerable(scored, gold_path):
-    """Of the answerable questions the model answers, how many are right? (M4 = 232/290)"""
+    """Accuracy on answered answerable questions."""
     gold = ev.index_by_id(ev.load_jsonl(gold_path))
     hit = tot = 0
     for p in scored:
@@ -54,7 +54,7 @@ def main():
 
     for split in ("val", "test"):
         out = ROOT / "data" / "outputs_b" / f"slm_{tag}_{split}.jsonl"
-        m4.infer_m4(str(adapter), items[split], str(out))
+        m4.infer_m4(str(adapter), items[split], str(out), overwrite=True)
         metrics, scored = m4.score_m4(str(out), str(gold[split]))
         hit, tot, acc = accuracy_on_answered_answerable(scored, str(gold[split]))
         summary["splits"][split] = {

@@ -70,7 +70,7 @@ def main():
         OUT.write_text(json.dumps(report, indent=1, ensure_ascii=False), encoding="utf-8")
         return 1
 
-    # Optional deep check: pool ids must exist in SQuAD train and in no dev question.
+    # Optional: verify pool ids against the SQuAD train split.
     train_path = next((q for q in [ROOT / "squad_data" / "train-v2.0.json",
                                    ROOT / "data" / "train-v2.0.json"] if q.exists()), None)
     dev_path = next((q for q in [ROOT / "squad_data" / "dev-v2.0.json",

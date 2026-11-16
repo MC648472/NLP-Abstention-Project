@@ -9,7 +9,7 @@ import torch
 import abstention_eval as ev
 from slm_interface import MODEL_NAME, SYSTEM_PROMPT
 
-REFUSAL_TEXT = "I don't know"   # 能被 A 的 is_abstention 识别
+REFUSAL_TEXT = "I don't know"   # Refusal target.
 
 
 def load_jsonl(path):
@@ -36,7 +36,7 @@ def build_train_examples(pool, refusal_ratio=0.5, max_n=1500, seed=0):
 
 
 def _prompt_text(tok, question, context=None):
-    """必须和 slm_interface._encode 完全一致, 否则训练和推理的提示词不匹配。"""
+    """Same prompt format as slm_interface._encode."""
     user = question if not context else f"Context: {context}\nQuestion: {question}"
     msgs = [{"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user}]
@@ -50,7 +50,7 @@ def _encode_example(tok, ex, max_len):
     ids = p + t
     if len(ids) > max_len:
         return None
-    return ids, [-100] * len(p) + t       # 只对答案部分算损失
+    return ids, [-100] * len(p) + t       # Loss on the answer only.
 
 
 def _collate(batch, pad_id, device):
@@ -68,7 +68,7 @@ def _collate(batch, pad_id, device):
 
 def train_lora(examples, out_dir, model_name=MODEL_NAME, epochs=2, lr=2e-4,
                bs=4, max_len=512, r=8, alpha=16, dropout=0.05, seed=0):
-    """训练并把 LoRA 权重和训练日志存到 out_dir。返回日志字典。"""
+    """Train LoRA and save the adapter and log to out_dir."""
     from peft import LoraConfig, get_peft_model
     from transformers import (AutoModelForCausalLM, AutoTokenizer,
                               get_linear_schedule_with_warmup)
@@ -79,7 +79,7 @@ def train_lora(examples, out_dir, model_name=MODEL_NAME, epochs=2, lr=2e-4,
     tok = AutoTokenizer.from_pretrained(model_name)
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
-    # 训练用 fp32 底模 + fp16 自动混合精度, 比纯 fp16 稳定
+    # fp32 base with fp16 autocast.
     model = AutoModelForCausalLM.from_pretrained(
         model_name, torch_dtype=torch.float32).to(device)
     cfg = LoraConfig(r=r, lora_alpha=alpha, lora_dropout=dropout,
@@ -137,12 +137,12 @@ def train_lora(examples, out_dir, model_name=MODEL_NAME, epochs=2, lr=2e-4,
     return log
 
 
-def infer_m4(lora_path, items, out_path):
-    """加载微调后的模型, 对 A 的题目贪心推理, 结果格式和 M1 完全相同 (含 avg_logprob)。"""
+def infer_m4(lora_path, items, out_path, overwrite=False):
+    """Run greedy inference with the LoRA adapter."""
     from slm_interface import SLM
     slm = SLM(lora_path=lora_path)
     slm.reset_peak_memory()
-    slm.run_batch(items, out_path, mode="greedy")
+    slm.run_batch(items, out_path, mode="greedy", overwrite=overwrite)
     recs = load_jsonl(out_path)
     print(f"峰值显存 {slm.peak_memory_mb():.0f} MB, "
           f"平均耗时 {sum(r['time_s'] for r in recs) / len(recs):.2f} s/题")
@@ -150,12 +150,14 @@ def infer_m4(lora_path, items, out_path):
     torch.cuda.empty_cache()
 
 
-def score_m4(pred_path, gold_path, out_path=None):
+def score_m4(pred_path, gold_path, out_path=None, base_pred_path=None):
     gold = ev.load_jsonl(gold_path)
     gold_by = ev.index_by_id(gold)
     preds = ev.m1_preds(gold, ev.index_by_id(ev.load_jsonl(pred_path)))
     scored = ev.apply_threshold(preds, gold_by, float("-inf"))
-    metrics = ev.evaluate(scored)
+    base = (ev.m1_preds(gold, ev.index_by_id(ev.load_jsonl(base_pred_path)))
+            if base_pred_path else None)
+    metrics = ev.evaluate(scored, base_preds=base)
     print(ev.format_metrics(metrics))
     if out_path:
         with open(out_path, "w", encoding="utf-8") as f:

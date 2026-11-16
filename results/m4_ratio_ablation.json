@@ -1,0 +1,59 @@
+[
+ {
+  "ratio": "0.3",
+  "adapter": "r30",
+  "coverage": 0.516,
+  "selective_point": 0.5388,
+  "selective_boot_mean": 0.5389,
+  "selective_ci_low": 0.4942,
+  "selective_ci_high": 0.581,
+  "overall_point": 0.634,
+  "overall_boot_mean": 0.634,
+  "overall_ci_low": 0.603,
+  "overall_ci_high": 0.664,
+  "correct_refusal": 0.712,
+  "over_refusal": 0.256,
+  "bootstrap": {
+   "B": 4000,
+   "seed": 42
+  }
+ },
+ {
+  "ratio": "0.5",
+  "adapter": "r50",
+  "coverage": 0.37,
+  "selective_point": 0.627,
+  "selective_boot_mean": 0.627,
+  "selective_ci_low": 0.5753,
+  "selective_ci_high": 0.6762,
+  "overall_point": 0.652,
+  "overall_boot_mean": 0.652,
+  "overall_ci_low": 0.621,
+  "overall_ci_high": 0.682,
+  "correct_refusal": 0.84,
+  "over_refusal": 0.42,
+  "bootstrap": {
+   "B": 4000,
+   "seed": 42
+  }
+ },
+ {
+  "ratio": "0.7",
+  "adapter": "r70",
+  "coverage": 0.264,
+  "selective_point": 0.6591,
+  "selective_boot_mean": 0.6595,
+  "selective_ci_low": 0.6016,
+  "selective_ci_high": 0.7165,
+  "overall_point": 0.629,
+  "overall_boot_mean": 0.6291,
+  "overall_ci_low": 0.599,
+  "overall_ci_high": 0.658,
+  "correct_refusal": 0.91,
+  "over_refusal": 0.562,
+  "bootstrap": {
+   "B": 4000,
+   "seed": 42
+  }
+ }
+]

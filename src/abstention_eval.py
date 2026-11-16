@@ -1,6 +1,7 @@
 import argparse
 import json
 import math
+import os
 import re
 import string
 from collections import Counter
@@ -128,15 +129,38 @@ def over_refusal_rate(preds):
     return sum(p["abstain"] for p in ans) / len(ans) if ans else float("nan")
 
 
-def correct_answer_refusal_rate(preds):
-    """Unnecessary refusals among questions the model would have answered correctly."""
-    eligible = [p for p in preds if not p["is_impossible"] and p.get("forced_correct")]
+def _base_by_id(base_preds):
+    """Index base predictions by id."""
+    if base_preds is None:
+        return None
+    if isinstance(base_preds, dict):
+        return base_preds
+    return {p["id"]: p for p in base_preds}
+
+
+def _would_be_correct(p, base_by_id):
+    """Return the base model's forced-answer correctness."""
+    if base_by_id is None:
+        return bool(p.get("forced_correct"))
+    base = base_by_id.get(p["id"])
+    if base is None:
+        return bool(p.get("forced_correct"))
+    return bool(base.get("forced_correct"))
+
+
+def correct_answer_refusal_rate(preds, base_preds=None):
+    """Refusal rate on answerable questions the base model answers correctly."""
+    base_by_id = _base_by_id(base_preds)
+    eligible = [p for p in preds
+                if not p["is_impossible"] and _would_be_correct(p, base_by_id)]
     return sum(p["abstain"] for p in eligible) / len(eligible) if eligible else float("nan")
 
 
-def wrong_answer_refusal_rate(preds):
-    """Refusals among answerable questions the model would have answered wrongly."""
-    eligible = [p for p in preds if not p["is_impossible"] and not p.get("forced_correct")]
+def wrong_answer_refusal_rate(preds, base_preds=None):
+    """Refusal rate on answerable questions the base model answers wrongly."""
+    base_by_id = _base_by_id(base_preds)
+    eligible = [p for p in preds
+                if not p["is_impossible"] and not _would_be_correct(p, base_by_id)]
     return sum(p["abstain"] for p in eligible) / len(eligible) if eligible else float("nan")
 
 
@@ -158,7 +182,7 @@ def _rankdata(values):
 
 
 def auroc_auprc(preds):
-    # Threshold-independent label: would the answer be correct if we answered?
+    # Label: forced-answer correctness.
     labels = np.array([1 if p.get("forced_correct", p["correct"]) else 0 for p in preds], dtype=int)
     scores = np.array([p["confidence"] for p in preds], dtype=float)
     n_pos = int(labels.sum())
@@ -183,7 +207,8 @@ def ece_score(preds, n_bins=10):
     edges = np.linspace(0.0, 1.0, n_bins + 1)
     ece = 0.0
     for i in range(n_bins):
-        members = (conf >= edges[i]) & (conf < edges[i + 1])
+        right = conf <= edges[i + 1] if i == n_bins - 1 else conf < edges[i + 1]
+        members = (conf >= edges[i]) & right
         if not members.any():
             continue
         ece += members.mean() * abs(correct[members].mean() - conf[members].mean())
@@ -198,7 +223,8 @@ def brier(preds):
                           for p in preds]))
 
 
-def evaluate(preds):
+def evaluate(preds, base_preds=None):
+    """Behaviour and cost metrics; pass base_preds for conditional refusal rates."""
     auroc, auprc = auroc_auprc(preds)
     return {
         "n": len(preds),
@@ -207,13 +233,13 @@ def evaluate(preds):
         "risk": risk(preds),
         "correct_refusal_rate": correct_refusal_rate(preds),
         "over_refusal_rate": over_refusal_rate(preds),
-        "correct_answer_refusal_rate": correct_answer_refusal_rate(preds),
-        "wrong_answer_refusal_rate": wrong_answer_refusal_rate(preds),
+        "correct_answer_refusal_rate": correct_answer_refusal_rate(preds, base_preds),
+        "wrong_answer_refusal_rate": wrong_answer_refusal_rate(preds, base_preds),
         "auroc": auroc,
         "auprc": auprc,
         "ece": ece_score(preds),
         "brier": brier(preds),
-        # Overall decision accuracy: correct answers + correctly refused unanswerables.
+        # Overall decision accuracy.
         "behaviour_accuracy": float(np.mean([1 if p["correct"] else 0 for p in preds])) if preds else float("nan"),
         "avg_samples": float(np.mean([p["n_samples"] for p in preds])) if preds else float("nan"),
         "avg_latency_s": float(np.mean([p.get("latency_s") or 0.0 for p in preds])) if preds else float("nan"),
@@ -274,7 +300,7 @@ def m3_preds(gold_rows, pred_rows, k=5):
 
 
 def refusal_preds(gold_rows, pred_rows):
-    """M2 / M4: the decision is the model's own refusal, no threshold is applied."""
+    """M2/M4: abstain iff the model refuses."""
     preds = []
     for record in gold_rows:
         pred = pred_rows[record["id"]]
@@ -300,35 +326,6 @@ def refusal_preds(gold_rows, pred_rows):
             "n_samples": 1, "latency_s": pred.get("time_s"),
         })
     return preds
-
-
-def gold_should_abstain(record, pred):
-    if record["is_impossible"]:
-        return True
-    return not forced_correct(record, pred["answer"])
-
-
-def tune_threshold(preds, gold_by_id):
-    candidates = sorted({p["confidence"] for p in preds})
-    best_tau, best_f1 = candidates[0], -1.0
-    for tau in candidates:
-        tp = fp = fn = 0
-        for p in preds:
-            record = gold_by_id[p["id"]]
-            should = gold_should_abstain(record, p)
-            predicted = p.get("verbal_abstain", False) or p["confidence"] < tau
-            if predicted and should:
-                tp += 1
-            elif predicted and not should:
-                fp += 1
-            elif not predicted and should:
-                fn += 1
-        precision = tp / (tp + fp) if tp + fp else 0.0
-        recall = tp / (tp + fn) if tp + fn else 0.0
-        f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
-        if f1 > best_f1:
-            best_f1, best_tau = f1, tau
-    return float(best_tau), float(best_f1)
 
 
 def apply_threshold(preds, gold_by_id, tau):
@@ -405,7 +402,7 @@ def risk_coverage_curve(preds):
             "tau": float(ranked[i]["confidence"]),
         })
         i = j + 1
-    # points are ordered high-coverage -> low-coverage; sort ascending for plotting
+    # Sort ascending for plotting.
     pts = sorted({(round(p["coverage"], 6), p["selective_accuracy"], p["behaviour_accuracy"],
                    p["risk"], p["tau"]) for p in points}, key=lambda t: t[0])
     return [{"coverage": c, "selective_accuracy": a, "behaviour_accuracy": b,
@@ -432,7 +429,7 @@ _JUDGE_CACHE = {}
 
 
 def _judge_cached(gold_by_id, qid, answer, abstain):
-    """judge() re-runs normalisation on every grid point; the answers repeat."""
+    """Cache judge() by (id, answer, abstain)."""
     key = (qid, answer, bool(abstain))
     hit = _JUDGE_CACHE.get(key)
     if hit is None:
@@ -500,7 +497,7 @@ def tune_two_stage_at_coverage(m1_preds, m3_preds, gold_by_id, target_coverage,
     if best is None:      # target out of reach: take the closest coverage
         for i, low in enumerate(cuts[:-1]):
             for high in cuts[i + 1:]:
-                for tau_c in (0.4, 0.6, 0.8, 1.0):
+                for tau_c in (0.2, 0.4, 0.6, 0.8, 1.0):
                     preds = simulate_two_stage(m1_preds, m3_preds, gold_by_id, low, high, tau_c)
                     cov = float(np.mean([0 if p["abstain"] else 1 for p in preds]))
                     acc = float(np.mean([1 if p["correct"] else 0 for p in preds]))
@@ -516,7 +513,7 @@ def format_metrics(metrics):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Score B's JSONL with A's abstention metrics")
+    parser = argparse.ArgumentParser(description="Score prediction JSONL with the shared metrics")
     parser.add_argument("--mode", choices=["m1", "m3", "refusal"], required=True,
                         help="m1=logprob+threshold, m3=consistency+threshold, refusal=M2/M4 raw refusal")
     parser.add_argument("--val-pred", required=True)
@@ -524,6 +521,10 @@ def main():
     parser.add_argument("--test-pred", required=True)
     parser.add_argument("--test-gold", required=True)
     parser.add_argument("--k", type=int, default=5, help="samples used for M3")
+    parser.add_argument("--target-coverage", type=float, default=0.5,
+                        help="fixed coverage target for M1/M3 (ignored for refusal mode)")
+    parser.add_argument("--base-pred", default="",
+                        help="optional base M1 jsonl for conditional refusal rates")
     parser.add_argument("--out-dir", default=".")
     args = parser.parse_args()
 
@@ -537,21 +538,26 @@ def main():
     if args.mode == "refusal":
         val_scored = refusal_preds(val_gold, val_preds_raw)
         test_scored = refusal_preds(test_gold, test_preds_raw)
+        base = (m1_preds(test_gold, index_by_id(load_jsonl(args.base_pred)))
+                if args.base_pred else None)
         print(f"{args.mode.upper()} (no threshold: abstain iff the model refuses)")
         print("val :", format_metrics(evaluate(val_scored)))
-        print("test:", format_metrics(evaluate(test_scored)))
+        print("test:", format_metrics(evaluate(test_scored, base_preds=base)))
     else:
         build = m1_preds if args.mode == "m1" else (lambda g, p: m3_preds(g, p, k=args.k))
         val_preds = build(val_gold, val_preds_raw)
         test_preds = build(test_gold, test_preds_raw)
-        tau, val_f1 = tune_threshold(val_preds, val_gold_by_id)
+        tau, val_cov = tune_at_coverage(val_preds, args.target_coverage)
         val_scored = apply_threshold(val_preds, val_gold_by_id, tau)
         test_scored = apply_threshold(test_preds, test_gold_by_id, tau)
-        print(f"{args.mode.upper()} tau={tau:.4f}  val refusal F1={val_f1:.4f}")
+        print(f"{args.mode.upper()} tau={tau:.4f}  target={args.target_coverage:.2f} "
+              f"val coverage={val_cov:.3f}")
         print("val :", format_metrics(evaluate(val_scored)))
         print("test:", format_metrics(evaluate(test_scored)))
 
-    with open(f"{args.out_dir.rstrip('/')}/{args.mode}_test_scored.jsonl", "w", encoding="utf-8") as f:
+    suffix = "" if args.mode == "refusal" else f"_cov{args.target_coverage}"
+    os.makedirs(args.out_dir, exist_ok=True)
+    with open(f"{args.out_dir.rstrip('/')}/{args.mode}{suffix}_test_scored.jsonl", "w", encoding="utf-8") as f:
         for p in test_scored:
             f.write(json.dumps(p, ensure_ascii=False) + "\n")
 

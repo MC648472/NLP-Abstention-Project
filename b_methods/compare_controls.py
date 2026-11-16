@@ -17,7 +17,7 @@ RUNS = {
 
 
 def answered_ids(gold_rows, pred_by_id):
-    """Answerable question ids that this run did NOT refuse."""
+    """Answerable ids this run did not refuse."""
     out = set()
     for g in gold_rows:
         if g["is_impossible"] or g["id"] not in pred_by_id:
@@ -97,12 +97,12 @@ def main():
     print(f"M4 accuracy on the {len(m4_answered)} it answers                        "
           f"{d['m4_answered_accuracy']:.1%}")
     print(f"answer-only on the same {len(m4_answered)}                 "
-          f"{d['ao1500_on_same_subset']:.1%}  <- fair comparison")
+          f"{d['ao1500_on_same_subset']:.1%}  <- matched subset")
     print(f"selection effect (same model, different subset)   {d['selection_effect']:+.1%}")
 
     out = ROOT / "results" / "m4_attribution.json"
 
-    # paired test on the matched subset: is M4 really better than the answer-only control?
+    # Paired test on the matched subset.
     if "ao1500" in preds:
         import numpy as np
         from math import comb

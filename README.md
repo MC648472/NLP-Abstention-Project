@@ -14,39 +14,42 @@ A compute-aware two-stage abstainer for `Qwen2.5-0.5B-Instruct` on SQuAD 2.0.
 
 | Path | Content |
 |---|---|
-| `Abstention_in_Small_Language_Models.ipynb` | the one runnable notebook: data, metrics, M1, M3, two-stage, M2, M4, the refusal-share ablation, a 5-question demo and the full 1,000-question run |
-| `src/abstention_eval.py` | **the only** scoring implementation (coverage / selective accuracy / correct refusal / over-refusal / cost, plus threshold helpers); both members score with this file |
+| `Abstention_in_Small_Language_Models.ipynb` | notebook: data, metrics, M1/M3/two-stage, M2/M4, demo and full run |
+| `src/abstention_eval.py` | shared scoring implementation (coverage, selective accuracy, refusal rates, cost, thresholds) |
 | `src/run_fixed_coverage.py` | val-only threshold selection, fixed-coverage test table for M1 / M3 / two-stage |
-| `src/score_m2_m4.py` | scores B's M2-conf / M2-idk / M4 outputs into `results/m2_m4_table.csv` |
+| `src/score_m2_m4.py` | scores M2-conf / M2-idk / M4 outputs into `results/m2_m4_table.csv` |
 | `src/bootstrap_ci.py` | paired bootstrap 95% CIs and McNemar tests |
-| `src/ablate_two_stage.py` | Stage-2 sample-count ablation (k = 3 / 5 / 8), with a hard consistency check against the main table |
-| `src/make_figures.py` | Figure 1 (pipeline) and Figure 2 (coverage vs accuracy), PIL only |
-| `run_all.bat` | runs the five table / figure / ablation scripts in order (Windows) |
-| `slm_interface.py` | Zhang Lu's unified inference interface (`generate` / `sample`); the notebook has a local fallback |
-| `b_methods/` | Zhang Lu's M2 (`m2_verbal.py`) and M4 (`m4_lora.py`) implementations, the M4 pool builder, and `check_train_overlap.py` — see `b_methods/README.md` |
-| `models/` | M4 LoRA adapter (`m4_lora_r50` weights; `r30` / `r50` / `r70` configs and training logs, where `rN` = refusal share ρ=0.N) — see `models/README.md` |
+| `src/ablate_two_stage.py` | Stage-2 sample-count ablation (k = 3 / 5 / 8) under two protocols (`retuned` and `fixed`), with a hard consistency check against the main table |
+| `src/ablate_m4_ratio.py` | M4 refusal-share ablation (r30 / r50 / r70): point estimates + bootstrap means |
+| `src/make_m4_cases.py` | writes `results/m4_cases.json` (10 over-refusal + 10 missed-refusal cases) |
+| `src/make_figures.py` | Figures 1-5 (pipeline, coverage-accuracy, M2 confidence, rho ablation, M1 distributions), PIL only |
+| `run_all.bat` | runs the CPU table / figure / ablation scripts in order (Windows) |
+| `slm_interface.py` | shared inference interface (`generate` / `sample`); the notebook has a local fallback |
+| `b_methods/` | M2 (`m2_verbal.py`) and M4 (`m4_lora.py`) implementations, the M4 pool builder, and `check_train_overlap.py` — see `b_methods/README.md` |
+| `models/` | M4 LoRA adapter (r50 weights + r30/r50/r70 configs and training logs) — see `models/README.md` |
 | `data/items/` | fixed val / test questions and gold (500 answerable + 500 unanswerable each, seed 42) |
 | `data/outputs_b/` | cached M1 / M3 / M2 / M4 generations, so every table can be rebuilt without a GPU |
 | `data/m4_train_pool.jsonl` | M4's training pool: 5,000 SQuAD 2.0 *train* questions (2,500 + 2,500) |
 | `results/` | main table, M2/M4 table, CIs, ablation, training-pool check, coverage–accuracy curves, per-question scored jsonl |
-| `figures/` | fig1 pipeline, fig2 coverage–quality–cost |
-| `docs/threshold_rule_decision.md` | official two-stage threshold rule, the fixed main-table/ablation numbers, and the 5%-grid sensitivity check |
+| `figures/` | fig1 pipeline, fig2 coverage-accuracy, fig3 M2 confidence, fig4 rho ablation, fig5 M1 log-prob distributions |
+| `docs/threshold_rule_decision.md` | official two-stage threshold rule, the fixed main-table/ablation numbers, and the internal 5%-grid sensitivity check (not in the PDF) |
 
 ## Reproduce the report tables (CPU, no GPU, no model)
 
 ```bash
-python src/run_fixed_coverage.py     # results/main_table_fixed_coverage.csv + curves + config
-python src/score_m2_m4.py            # results/m2_m4_table.csv + M2/M4 per-question scores
-python src/bootstrap_ci.py           # results/ci_table.csv + results/pairwise_ci.csv
-python src/make_figures.py           # figures/fig1, figures/fig2
-python src/ablate_two_stage.py       # results/two_stage_ablation.csv   (a few minutes)
+python src/run_fixed_coverage.py     # main table + curves + config
+python src/score_m2_m4.py            # M2/M4 table + conditional_refusal.csv
+python src/bootstrap_ci.py           # ci_table.csv + pairwise_ci.csv
+python src/ablate_m4_ratio.py        # m4_ratio_ablation.csv + .json
+python src/make_m4_cases.py          # results/m4_cases.json
+python src/make_figures.py           # figures/fig1..fig5
+python src/ablate_two_stage.py       # two_stage_ablation.csv (a few minutes)
 ```
 
-`run_all.bat` runs all five. Everything above reads `data/outputs_b/*.jsonl`
-and needs only `numpy` + `Pillow` (see `requirements.txt`). Re-running the five
-scripts reproduces the committed `results/` files **byte for byte**; the two
-`figures/` PNGs depend on the Pillow / font version and may differ by a few
-pixels. No number in the report comes from outside this repository.
+`run_all.bat` runs all CPU scripts. Everything above reads `data/outputs_b/*.jsonl`
+and needs only `numpy` + `Pillow` (see `requirements.txt`). Re-running these
+scripts on this repository reproduces the committed `results/` and `figures/`
+files (CSV/JSON data-identical; PNG bytes depend on the Pillow/font version).
 
 ## Reproduce the method runs (GPU, Colab)
 
@@ -58,13 +61,13 @@ pixels. No number in the report comes from outside this repository.
    For the full 1,000-question table set `RUN_FULL_EXPERIMENT=True` (section 10); it stores 8 samples per
    question, scores the first 5, tunes thresholds on val only, and writes `results/notebook_main_table.csv`
    (the curated report table stays at `results/main_table_fixed_coverage.csv`).
-5. B's methods are behind their own flags: `RUN_M2=True` (section 11, both M2 variants, ≈10 min),
+5. M2/M4 are behind their own flags: `RUN_M2=True` (section 11, both M2 variants, ≈10 min),
    `RUN_M4_TRAIN=True` / `RUN_M4_INFER=True` (section 12, retrain 3.6 min / re-infer with the committed
    adapter). Section 13 scores the r30 / r50 / r70 ablation from the committed generations — CPU only.
    Section 14 is the threshold-free diagnostic: AUROC labelled by *would the forced answer be correct*,
    the mean `avg_logprob` of the three question buckets, and the conditional refusal rates — also CPU only.
-6. With every flag `False` the notebook needs no GPU: it prints the cached tables.
-7. Section 16 is the live demo used in the presentation video (answered / correctly refused /
+6. With every flag `False` the notebook needs no GPU: it prints the cached tables and the M4 case list.
+7. Section 16 is the one-question live demo used in the presentation video (answered / correctly refused /
    answered although it should have refused), at the val-tuned 0.3-coverage operating point.
 
 ## Protocol
@@ -83,6 +86,9 @@ pixels. No number in the report comes from outside this repository.
   and ties go to fewer samples. The main table and the k ablation call the same function;
   `src/ablate_two_stage.py` asserts that the k=5 row equals the main-table row. A 5% grid is
   kept only as a sensitivity check (see `docs/threshold_rule_decision.md`), not as the headline.
+- The k ablation now has a `protocol` column: `retuned` (one config per k; selective
+  44.2/45.1/45.0) and `fixed` (k=5 config; samples 1.62/2.03/2.65). The PDF's k sentence
+  mixes these two columns; no single protocol yields both, so the CSV reports both.
 - M3 has only five consistency levels, so its minimum reachable coverage is 48.3%; the 0.3 target is
   reported at the closest reachable point. M2-conf's verbal confidence has only 11 distinct values on val.
   M2-idk and M4 refuse by themselves, so each has one natural operating point and no threshold.
@@ -102,31 +108,37 @@ pixels. No number in the report comes from outside this repository.
 |---|---|
 | main table (M1 / M3 / two-stage, 0.3 and 0.5 coverage) | `results/main_table_fixed_coverage.csv` |
 | M2-conf / M2-idk / M4 rows | `results/m2_m4_table.csv` |
+| conditional refusal rates (M4 34.0/53.1, M2-idk 13.4/15.3) | `results/conditional_refusal.csv` |
+| M4 rho ablation (Table 6) | `results/m4_ratio_ablation.csv` |
 | 95% CIs, paired differences, McNemar p | `results/ci_table.csv`, `results/pairwise_ci.csv` |
-| Stage-2 sample-count ablation | `results/two_stage_ablation.csv` |
-| M4 refusal-share (ρ) ablation — report Table 6 | `data/outputs_b/slm_m4r30_test.jsonl`, `slm_m4_test.jsonl`, `slm_m4r70_test.jsonl` (scored in notebook §13) |
+| Stage-2 sample-count ablation | `results/two_stage_ablation.csv` (`protocol` = retuned / fixed) |
 | Two-stage threshold-rule decision + 5%-grid sensitivity | `docs/threshold_rule_decision.md` |
 | coverage–accuracy curves (Figure 2) | `results/coverage_accuracy_curves.json` |
 
+The PDF's Table 6 reports bootstrap means 0.538 / 0.633 (r30) and 0.657 / 0.628 (r70);
+the committed generations give point estimates 0.5388 / 0.6340 and 0.6591 / 0.6290.
+The differences are 0.001–0.003; the PDF footnote states ≤0.002, and the r70 selective
+residual is 0.0025. The PDF's r30/r70 counts are consistent with one fewer correct
+answered question than the committed generations, so the remaining 0.0025 cannot be
+removed without regenerating the (uncommitted) r30/r70 adapters. `ablate_m4_ratio.py`
+writes both the point estimate and the 4,000-resample bootstrap mean for each cell.
+
 ## What is reproducible and what is not
 
-- **Reproducible on CPU**: cached generations → every table byte-identically, and both figures
-  (their PNG bytes may vary with the Pillow / font version).
-- **Reproducible on GPU**: M1 / M3 / two-stage inference in the notebook. M3's 8 samples use `seed=0+i`
-  (question index), matching the committed `data/outputs_b/slm_m3_*.jsonl`; a subset re-run reuses the
-  same samples.
-- **Reproducible on GPU (B's part)**: M2-conf / M2-idk prompts and parsing (`b_methods/m2_verbal.py`),
+- **Reproducible on CPU**: cached generations → every table and all five figures
+  (data-identical; PNG rendering may vary slightly with the Pillow/font version).
+- **Reproducible on GPU**: M1 / M3 / two-stage inference in the notebook. M3 samples are seeded by
+  the item index (`seed + i`), the same scheme as the cached run: a prefix subset reproduces the
+  same samples, an arbitrary subset does not.
+- **Reproducible on GPU (M2/M4)**: M2-conf / M2-idk prompts and parsing (`b_methods/m2_verbal.py`),
   M4's training-set construction and LoRA training (`b_methods/m4_lora.py`), and M4 inference with the
-  committed `m4_lora_r50` adapter. Training the reported adapter takes 3.6 min and peaks at 9.0 GB on a T4.
+  committed r50 adapter. Training the reported adapter takes 3.6 min and peaks at 9.0 GB on a T4.
 - **Evidence for "no leak"**: `python b_methods/check_train_overlap.py` reports
   `|pool ∩ val| = |pool ∩ test| = 0` for the 5,000-question pool and writes sha256 of the pool and both
   gold files to `results/m4_train_pool_check.json`. Add `squad_data/train-v2.0.json` (not committed,
   41 MB) and it also proves every pool id occurs in the SQuAD **train** split.
 - **Not in this repository**: the r30 / r70 adapter weights (configs and logs are here; retrain or take
   them from the project Drive folder) and the raw SQuAD json files.
-- **Not generated by the five scripts**: report figures 3–5 (M2 confidence distribution, ρ trade-off,
-  M1 log-probability buckets) are exported images; the numbers behind them come from the per-question
-  scored files and `data/outputs_b/`.
 
 ## Branch layout
 
@@ -137,10 +149,9 @@ pixels. No number in the report comes from outside this repository.
 | `feature/B-m2-m4` | B | M2 / M4 inference and training code, branched **from `feature/A-data-M1-M3`** |
 | `final` | both | merge of the two, then one "freeze numbers" commit; tagged `submission-v1` |
 
-Rules that keep the merge clean:
+Repository rules:
 
-- `results/` and `figures/` are **generated**: after the merge, A re-runs the five scripts and commits the
-  regenerated files once. B does not commit them.
-- `src/abstention_eval.py` has exactly one copy and one owner (A); Zhang Lu's changes to it come as a diff.
+- `results/` and `figures/` are generated; regenerate them before submission.
+- `src/abstention_eval.py` is the shared scorer.
 - The presentation deck and the report are binary files; they are submitted through Moodle and kept out of
   this repository on purpose.

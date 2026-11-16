@@ -224,6 +224,7 @@ squad_data/
 data/train-v2.0.json
 data/dev-v2.0.json
 *.safetensors
+!models/m4_lora_r50/adapter_model.safetensors
 *.bin
 *.pt
 *.ckpt

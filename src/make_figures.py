@@ -1,8 +1,10 @@
 import csv
 import json
 import math
+from collections import Counter
 from pathlib import Path
 
+import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -157,11 +159,13 @@ def step(points):
 
 
 class Panel:
-    def __init__(self, c, box, xlim, ylim, title, ylabel, xticks, yticks):
+    def __init__(self, c, box, xlim, ylim, title, ylabel, xticks, yticks,
+                 xlabel="coverage"):
         self.c, self.x0, self.y0, self.x1, self.y1 = c, *box
         self.xlim, self.ylim = xlim, ylim
         self.title, self.ylabel = title, ylabel
         self.xticks, self.yticks = xticks, yticks
+        self.xlabel = xlabel
 
     def X(self, v):
         return self.x0 + (v - self.xlim[0]) / (self.xlim[1] - self.xlim[0]) * (self.x1 - self.x0)
@@ -171,14 +175,15 @@ class Panel:
 
     def frame(self):
         c = self.c
+        fmt = "{:.2f}" if (self.ylim[1] - self.ylim[0]) < 0.2 else "{:.1f}"
         for t in self.yticks:
             c.line([(self.x0, self.Y(t)), (self.x1, self.Y(t))], fill=GRID, width=1)
-            c.text((self.x0 - 10, self.Y(t)), f"{t:.1f}", size=15, anchor="rm", fill=MUTED)
+            c.text((self.x0 - 10, self.Y(t)), fmt.format(t), size=15, anchor="rm", fill=MUTED)
         for t in self.xticks:
             c.text((self.X(t), self.y1 + 9), f"{t:.1f}", size=15, anchor="ma", fill=MUTED)
         c.line([(self.x0, self.y1), (self.x1, self.y1)], fill=INK, width=1.5)
         c.line([(self.x0, self.y0), (self.x0, self.y1)], fill=INK, width=1.5)
-        c.text(((self.x0 + self.x1) / 2, self.y1 + 40), "coverage", size=17, anchor="mm")
+        c.text(((self.x0 + self.x1) / 2, self.y1 + 40), self.xlabel, size=17, anchor="mm")
         c.vtext((self.x0 - 62, (self.y0 + self.y1) / 2), self.ylabel, size=17)
         c.text((self.x0, self.y0 - 20), self.title, size=19, anchor="lm", bold=True)
 
@@ -291,7 +296,162 @@ def fig2():
                      "Qwen2.5-0.5B-Instruct · thresholds tuned on val · "
                      "error bars: 95% paired bootstrap CI",
            size=15, fill=MUTED)
-    c.save(OUT / "fig2_coverage_quality_cost.png")
+    c.save(OUT / "fig2_coverage_accuracy.png")
+
+
+def fig3():
+    """M2-conf self-reported confidence distribution on the test set."""
+    rows = [json.loads(line) for line in
+            (ROOT / "data" / "outputs_b" / "slm_m2conf_test.jsonl")
+            .read_text(encoding="utf-8").splitlines() if line.strip()]
+    counts = Counter(int(round(float(r.get("confidence", 0.0)) * 100)) for r in rows)
+    vals = sorted(counts)
+    W, H = 1100, 560
+    c = Canvas(W, H)
+    x0, y0, x1, y1 = 90, 90, 1060, 470
+    top = max(counts.values())
+    step = (x1 - x0) / max(1, len(vals))
+    c.line([(x0, y0), (x0, y1)], fill=INK, width=1.5)
+    c.line([(x0, y1), (x1, y1)], fill=INK, width=1.5)
+    for t in range(0, top + 1, 100):
+        y = y1 - t / (top * 1.15) * (y1 - y0)
+        c.line([(x0, y), (x1, y)], fill=GRID, width=1)
+        c.text((x0 - 10, y), str(t), size=15, anchor="rm", fill=MUTED)
+    for i, v in enumerate(vals):
+        x = x0 + (i + 0.5) * step
+        h = counts[v] / (top * 1.15) * (y1 - y0)
+        c.rect((x - step * 0.35, y1 - h, x + step * 0.35, y1),
+               fill=(232, 240, 254), outline=(74, 111, 165), width=1, radius=2)
+        c.text((x, y1 - h - 6), str(counts[v]), size=12, anchor="mb", fill=INK)
+        c.vtext((x, y1 + 28), str(v), size=14, fill=MUTED)
+    c.text((30, 28), "M2-conf self-reported confidence on the test set (1,000 questions)",
+           size=19, bold=True)
+    c.text((30, 58), f"{len(vals)} distinct values; 75 / 85 / 95 hold "
+                     f"{counts[75]} / {counts[85]} / {counts[95]} questions",
+           size=15, fill=MUTED)
+    c.save(OUT / "fig3_m2conf_dist.png")
+
+
+def fig4():
+    """M4 refusal-ratio ablation: r30 / r50 / r70 on the test set."""
+    path = ROOT / "results" / "m4_ratio_ablation.csv"
+    if not path.exists():
+        print("skip fig4: run src/ablate_m4_ratio.py first")
+        return
+    with path.open(encoding="utf-8-sig", newline="") as f:
+        rows = list(csv.DictReader(f))
+    ratios = [float(r["ratio"]) for r in rows]
+    W, H = 1400, 1000
+    c = Canvas(W, H)
+
+    pa = Panel(c, (80, 80, 650, 420), (0.2, 0.8), (0.2, 0.6),
+               "(a) Coverage", "coverage", [0.3, 0.5, 0.7], [0.2, 0.3, 0.4, 0.5, 0.6],
+               xlabel="refusal ratio rho")
+    pa.frame()
+    pa.series([(x, float(r["coverage"])) for x, r in zip(ratios, rows)], C_TS)
+    for x, r in zip(ratios, rows):
+        pa.marker(x, float(r["coverage"]), C_TS, f"{float(r['coverage']):.3f}", dy=-16)
+
+    pb = Panel(c, (800, 80, 1370, 420), (0.2, 0.8), (0.5, 0.7),
+               "(b) Selective accuracy", "selective accuracy",
+               [0.3, 0.5, 0.7], [0.5, 0.6, 0.7], xlabel="refusal ratio rho")
+    pb.frame()
+    pb.series([(x, float(r["selective_point"])) for x, r in zip(ratios, rows)], C_M4)
+    for x, r in zip(ratios, rows):
+        pb.marker(x, float(r["selective_point"]), C_M4, f"{float(r['selective_boot_mean']):.3f}",
+                  dy=-16)
+
+    pc = Panel(c, (80, 510, 650, 850), (0.2, 0.8), (0.2, 1.0),
+               "(c) Correct vs over refusal", "refusal rate",
+               [0.3, 0.5, 0.7], [0.2, 0.4, 0.6, 0.8, 1.0], xlabel="refusal ratio rho")
+    pc.frame()
+    pc.series([(x, float(r["correct_refusal"])) for x, r in zip(ratios, rows)], C_TS)
+    pc.series([(x, float(r["over_refusal"])) for x, r in zip(ratios, rows)], C_M3)
+    for x, r in zip(ratios, rows):
+        pc.marker(x, float(r["correct_refusal"]), C_TS, None)
+        pc.marker(x, float(r["over_refusal"]), C_M3, None)
+
+    pd = Panel(c, (800, 510, 1370, 850), (0.2, 0.8), (0.6, 0.67),
+               "(d) Overall decision accuracy", "overall accuracy",
+               [0.3, 0.5, 0.7], [0.60, 0.62, 0.64, 0.66], xlabel="refusal ratio rho")
+    pd.frame()
+    pd.series([(x, float(r["overall_point"])) for x, r in zip(ratios, rows)], C_M1)
+    for x, r in zip(ratios, rows):
+        pd.marker(x, float(r["overall_point"]), C_M1, f"{float(r['overall_point']):.3f}", dy=-16)
+
+    lx, ly = 80, 960
+    for i, (color, label) in enumerate([(C_TS, "correct refusal / coverage"),
+                                        (C_M3, "over refusal"),
+                                        (C_M4, "selective accuracy"),
+                                        (C_M1, "overall accuracy")]):
+        x = lx + i * 310
+        c.line([(x, ly), (x + 28, ly)], fill=color, width=3)
+        c.text((x + 36, ly), label, size=14, anchor="lm")
+    c.text((30, 24), "M4 refusal-share ablation on the test set (r30 / r50 / r70)",
+           size=18, fill=MUTED)
+    c.save(OUT / "fig4_rho_ablation.png")
+
+
+def fig5():
+    """M1 avg_logprob distribution for correct / wrong / unanswerable questions."""
+    # Read gold and M1 fields directly.
+    gold_rows = [json.loads(line) for line in
+                 (ROOT / "data" / "items" / "b_gold_test.jsonl")
+                 .read_text(encoding="utf-8").splitlines() if line.strip()]
+    gold = {r["id"]: r for r in gold_rows}
+    m1 = [json.loads(line) for line in
+          (ROOT / "data" / "outputs_b" / "slm_m1_test.jsonl")
+          .read_text(encoding="utf-8").splitlines() if line.strip()]
+
+    def norm(s):
+        import re
+        import string
+        s = str(s).lower()
+        s = re.sub(r"\b(a|an|the)\b", " ", s)
+        s = "".join(ch for ch in s if ch not in set(string.punctuation))
+        return " ".join(s.split())
+
+    buckets = {"answerable & correct": [], "answerable & wrong": [], "unanswerable": []}
+    for p in m1:
+        g = gold[p["id"]]
+        if g["is_impossible"]:
+            buckets["unanswerable"].append(p["avg_logprob"])
+        else:
+            ok = any(norm(p["answer"]) == norm(a) for a in g["answers"])
+            buckets["answerable & correct" if ok else "answerable & wrong"].append(
+                p["avg_logprob"])
+
+    edges = np.linspace(-2.5, 0.0, 51)
+    W, H = 1100, 600
+    c = Canvas(W, H)
+    pa = Panel(c, (100, 90, 1040, 500), (-2.5, 0.0), (0.0, 0.30),
+               "", "density",
+               [-2.5, -2.0, -1.5, -1.0, -0.5, 0.0], [0.0, 0.1, 0.2, 0.3],
+               xlabel="length-normalised avg log-probability")
+    pa.frame()
+
+    styles = [(C_M1, "answerable & correct"), (C_M3, "answerable & wrong"),
+              (C_M4, "unanswerable")]
+    for color, label in styles:
+        vals = buckets[label]
+        counts, _ = np.histogram(vals, bins=edges)
+        density = counts / max(1, len(vals))
+        pts = []
+        for i, v in enumerate(density):
+            pts.append(((edges[i] + edges[i + 1]) / 2, float(v)))
+        pa.series(pts, color)
+
+    lx, ly = 100, 555
+    for i, (color, label) in enumerate(styles):
+        x = lx + i * 300
+        c.line([(x, ly), (x + 28, ly)], fill=color, width=3)
+        c.text((x + 36, ly), label, size=15, anchor="lm")
+    c.text((30, 24), "M1 confidence cannot separate 'no answer' from 'wrong answer'",
+           size=18, bold=True)
+    c.text((30, 54), "unanswerable (-0.406) overlaps wrong (-0.469); "
+                     "correct is shifted right (-0.192)",
+           size=15, fill=MUTED)
+    c.save(OUT / "fig5_m1_dist.png")
 
 
 def write_data():
@@ -316,5 +476,8 @@ def write_data():
 if __name__ == "__main__":
     fig1()
     fig2()
+    fig3()
+    fig4()
+    fig5()
     write_data()
     print("wrote", OUT)

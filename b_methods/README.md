@@ -1,22 +1,22 @@
-# Zhang Lu's methods: M2 (verbal confidence / "I don't know") and M4 (LoRA SFT)
+# M2 and M4 methods
 
-Everything here scores with `src/abstention_eval.py`, the same file A uses, so the
-numbers are on one scale. All three modules were written by Zhang Lu; `check_train_overlap.py`
-is Deng Yunfan's verification script for Zhang Lu's training pool.
+M2/M4 implementations. Scoring uses `src/abstention_eval.py` through
+`src/score_m2_m4.py`; `m2_verbal.py` has no scoring function.
+`check_train_overlap.py` verifies the M4 training pool.
 
 | File | What it does |
 |---|---|
 | `m2_verbal.py` | M2-conf: model answers then self-reports a 0–100 confidence; threshold tuned on val. M2-idk: prompt says "if the answer is not in the context, reply exactly: I don't know", no threshold. Includes `parse_conf` / `parse_idk`, resumable batch inference, and diagnostics (parse rate, confidence per answerability bucket). |
 | `m4_lora.py` | M4: build the 1,500-example SFT set from the train pool (750 answerable → gold answer, 750 unanswerable → `I don't know`), LoRA training (fp32 base + fp16 autocast, T4), inference on val/test, scoring, and over-refusal / missed-refusal case extraction. |
 | `prepare_m4_train.py` | builds `data/m4_train_pool.jsonl` from **SQuAD 2.0 train** (2,500 answerable + 2,500 unanswerable, seed 42). Never touches dev. |
-| `prepare_b_items.py` | builds the val/test question files A's notebook and B's runs share (dev, stratified, 500 + 500 per split, seed 42). |
+| `prepare_b_items.py` | builds the shared val/test question files (dev, stratified, 500 + 500 per split, seed 42). |
 | `check_train_overlap.py` | asserts `pool ∩ val = pool ∩ test = ∅`, prints sha256 of all three files, writes `results/m4_train_pool_check.json`. |
 
 ## Reproducing M2 and M4 on a T4 (Colab)
 
 ```python
-import sys; sys.path[:0] = ["src", "b_methods"]     # run from the repo root
-import abstention_eval as ev, m2_verbal as m2, m4_lora as m4
+import subprocess, sys; sys.path[:0] = ["src", "b_methods"]   # run from the repo root
+import m2_verbal as m2, m4_lora as m4
 from slm_interface import SLM
 
 val_items  = m2.load_jsonl("data/items/b_items_val.jsonl")
@@ -25,24 +25,20 @@ gold_val, gold_test = "data/items/b_gold_val.jsonl", "data/items/b_gold_test.jso
 
 slm = SLM()                                          # Qwen2.5-0.5B-Instruct, fp16
 for version, name in [("conf", "m2conf"), ("idk", "m2idk")]:
-    m2.run_m2(slm, val_items,  f"data/outputs_b/slm_{name}_val.jsonl",  version)
-    m2.run_m2(slm, test_items, f"data/outputs_b/slm_{name}_test.jsonl", version)
-    m2.score_m2(version, f"data/outputs_b/slm_{name}_val.jsonl", gold_val,
-                f"data/outputs_b/slm_{name}_test.jsonl", gold_test, out_dir="results")
+    m2.run_m2(slm, val_items,  f"data/outputs_b/slm_{name}_val.jsonl",  version, overwrite=True)
+    m2.run_m2(slm, test_items, f"data/outputs_b/slm_{name}_test.jsonl", version, overwrite=True)
+subprocess.run([sys.executable, "src/score_m2_m4.py"], check=True)   # fixed coverage
 m2.diagnostics("data/outputs_b/slm_m2conf_val.jsonl", gold_val)
 
 pool = m2.load_jsonl("data/m4_train_pool.jsonl")
 ex   = m4.build_train_examples(pool, refusal_ratio=0.5, max_n=1500, seed=0)
 m4.train_lora(ex, "models/m4_lora_r50", r=8, alpha=16, epochs=2, lr=2e-4, bs=4)
-m4.infer_m4("models/m4_lora_r50", val_items,  "data/outputs_b/slm_m4_val.jsonl")
-m4.infer_m4("models/m4_lora_r50", test_items, "data/outputs_b/slm_m4_test.jsonl")
+m4.infer_m4("models/m4_lora_r50", val_items,  "data/outputs_b/slm_m4_val.jsonl", overwrite=True)
+m4.infer_m4("models/m4_lora_r50", test_items, "data/outputs_b/slm_m4_test.jsonl", overwrite=True)
 metrics, scored = m4.score_m4("data/outputs_b/slm_m4_test.jsonl", gold_test,
-                              "results/m4_test_scored.jsonl")
+                              "results/m4_test_scored.jsonl",
+                              base_pred_path="data/outputs_b/slm_m1_test.jsonl")
 ```
-
-> Note: `m2.score_m2` uses the legacy refusal-F1 threshold rule. The M2-conf numbers in the report
-> and in `results/m2_m4_table.csv` come from `python src/score_m2_m4.py`, which uses the fixed-coverage
-> protocol.
 
 Training the reported adapter took **3.6 min** (213 s) and peaked at **9.0 GB** on a T4;
 1,490 of 1,500 examples fit in 512 tokens (the other 10 were dropped).
@@ -54,9 +50,9 @@ Training the reported adapter took **3.6 min** (213 s) and peaked at **9.0 GB** 
   `|pool ∩ val| = |pool ∩ test| = 0` (sha256 of all three files in
   `results/m4_train_pool_check.json`).
 - Training set: 1,500 examples, **750 answerable with the gold answer as target +
-  750 unanswerable with `I don't know`** — it is in-domain SFT (task + abstention),
-  not pure abstention tuning. The report says so, together with the 42.0% over-refusal
-  rate and the 80.0% vs 58.2% answerable-question comparison against M1.
+  750 unanswerable with `I don't know`** — in-domain SFT (task + abstention), not
+  pure abstention tuning; over-refusal is 42.0%, and accuracy on the answerable
+  questions it answers is 80.0% vs 58.2% for forced M1.
 - Refusal-ratio ablation (r30 = 30% refusal, r50 = 50%, r70 = 70%): logs in
   `models/m4_lora_r*/train_log.json`, generations in `data/outputs_b/slm_m4r30_*.jsonl`
   and `slm_m4r70_test.jsonl`. The reported row is **r50** (`slm_m4_*.jsonl`).
@@ -75,9 +71,8 @@ refusal examples are in the SFT set. Test set, 1,000 questions:
 | M1 | — | 500 (100%) | — | 58.2% | — |
 
 - Both controls **never refuse** (over-refusal 0.000), so their overall accuracy stays below
-  the 50.0% always-abstain line. M4's +28.6 points over the control are dominated by the
-  refusal decision (correct refusals minus over-refusals); they cannot be separated strictly
-  from the control's own in-domain QA gain (report §6.2/7.2).
+  the 50.0% always-abstain line. M4's +28.6 points over the control is the value of the
+  learned refusal decision, not of better answering.
 - Domain QA alone lifts accuracy on answerable questions from 58.2% (M1) to 73.2%, i.e. about
   15 of M4's points are "learned to answer SQuAD".
 - M4's 80.0% is measured on the 290 questions it chose to answer. Restricted to those same
